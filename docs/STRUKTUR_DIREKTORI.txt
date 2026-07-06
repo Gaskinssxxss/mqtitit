@@ -1,0 +1,65 @@
+STRUKTUR DIREKTORI TIGA MESIN
+==============================
+
+Project dipisahkan berdasarkan mesin tempat program dijalankan:
+
+.
+├── 01_windows_client/
+│   ├── config.env.example
+│   ├── requirements.txt
+│   ├── doctor.ps1
+│   ├── run_client.ps1
+│   ├── analyze_run.ps1
+│   ├── analyze_all.ps1
+│   └── src/
+│       ├── mqtt_test_client.py
+│       ├── analyze_single_run.py
+│       └── analyze_all_runs.py
+│
+├── 02_ubuntu_server_a_broker/
+│   ├── config.env.example
+│   └── scripts/
+│       ├── doctor.sh
+│       ├── run_broker.sh
+│       ├── capture_broker.sh
+│       ├── rate_limit.sh
+│       ├── finalize_broker.sh
+│       ├── extract_raw_flow.sh
+│       └── common.sh
+│
+├── 03_ubuntu_server_b_attacker/
+│   ├── config.env.example
+│   └── scripts/
+│       ├── doctor.sh
+│       ├── run_attacker.sh
+│       ├── attack_syn_flood.sh
+│       └── common.sh
+│
+└── docs/
+
+01_windows_client
+-----------------
+
+Folder ini hanya untuk Windows. Tidak membutuhkan WSL. Program PowerShell
+menjalankan client Python dan proses analisis. Hasil akhir seluruh mesin
+dikumpulkan di folder experiments pada bagian ini.
+
+02_ubuntu_server_a_broker
+-------------------------
+
+Folder ini hanya untuk VirtualBox A. Broker Mosquitto berjalan pada mesin ini.
+TShark merekam paket pada interface jaringan Ubuntu Server A dan nftables
+menjalankan rate limiting pada skenario mitigasi.
+
+03_ubuntu_server_b_attacker
+---------------------------
+
+Folder ini hanya untuk VirtualBox B. Hping3 menghasilkan SYN flood menuju IP
+Ubuntu Server A. Folder ini tidak dibutuhkan oleh Windows atau broker.
+
+Mengapa kode dipisahkan?
+------------------------
+
+Setiap mesin hanya melihat program yang menjadi tanggung jawabnya. Dengan
+demikian, pengguna tidak perlu memilih role broker/client/attacker dari satu
+script campuran dan risiko menjalankan program pada mesin yang salah berkurang.

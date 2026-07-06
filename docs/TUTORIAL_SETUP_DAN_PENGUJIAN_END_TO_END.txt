@@ -1,0 +1,328 @@
+TUTORIAL RINGKAS SETUP DAN PENGUJIAN
+=====================================
+
+Arsitektur:
+
+Windows client  ---> Ubuntu Server A <--- Ubuntu Server B
+                    Broker MQTT          SYN flood
+                    Capture
+                    Rate limiting
+
+Mode: local
+Jaringan: VirtualBox Host-Only
+
+Wi-Fi hanya digunakan untuk internet. Trafik penelitian menggunakan jaringan
+Host-Only. SYN flood hanya boleh diarahkan ke VM sendiri.
+
+
+1. BUAT DUA VM
+===============
+
+Ubuntu Server A:
+- IP: 192.168.56.10
+- Menjalankan Mosquitto, TShark, dan nftables.
+
+Ubuntu Server B:
+- IP: 192.168.56.20
+- Menjalankan hping3.
+
+Pada kedua VM:
+
+Adapter 1 = NAT
+Adapter 2 = Host-Only Adapter
+
+Windows menggunakan IP Host-Only 192.168.56.1.
+
+
+2. ATUR IP VM
+==============
+
+Periksa interface:
+
+ip -br address
+
+Contoh Netplan Server A:
+
+sudo nano /etc/netplan/00-installer-config.yaml
+
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: true
+    enp0s8:
+      dhcp4: false
+      addresses:
+        - 192.168.56.10/24
+
+Server B menggunakan konfigurasi sama, tetapi IP-nya 192.168.56.20/24.
+Sesuaikan enp0s3 dan enp0s8 dengan nama interface VM.
+
+Terapkan:
+
+sudo netplan try
+sudo netplan apply
+
+Uji:
+
+# Dari Server B
+ping -c 4 192.168.56.10
+
+# Dari Windows
+ping 192.168.56.10
+ping 192.168.56.20
+
+
+3. SETUP SERVER A
+==================
+
+Install:
+
+sudo apt update
+sudo apt install -y mosquitto mosquitto-clients tshark nftables openssh-server
+sudo dpkg-reconfigure wireshark-common
+sudo usermod -aG wireshark "$USER"
+
+Saat konfigurasi Wireshark muncul, pilih Yes. Setelah itu logout dan login.
+
+Konfigurasi Mosquitto:
+
+sudo nano /etc/mosquitto/conf.d/research-local.conf
+
+Isi:
+
+listener 1883 0.0.0.0
+allow_anonymous true
+
+Aktifkan:
+
+sudo systemctl enable mosquitto
+sudo systemctl restart mosquitto
+sudo ss -lntp | grep 1883
+
+Siapkan project:
+
+cd ~/mqtt-dos-project/02_ubuntu_server_a_broker
+chmod +x scripts/*.sh
+cp config.env.example config.env
+nano config.env
+
+Pastikan:
+
+DEPLOYMENT_MODE=local
+BROKER_HOST=192.168.56.10
+BROKER_CAPTURE_HOST=192.168.56.10
+BROKER_IFACE=enp0s8
+MQTT_PORT=1883
+EXPERIMENT_DURATION=60
+CAPTURE_DURATION=75
+RL_RATE=50/second
+RL_BURST=100
+
+Periksa:
+
+./scripts/doctor.sh
+
+
+4. SETUP SERVER B
+==================
+
+Install dan siapkan:
+
+sudo apt update
+sudo apt install -y hping3 openssh-server
+cd ~/mqtt-dos-project/03_ubuntu_server_b_attacker
+chmod +x scripts/*.sh
+cp config.env.example config.env
+nano config.env
+
+Pastikan:
+
+DEPLOYMENT_MODE=local
+BROKER_HOST=192.168.56.10
+MQTT_PORT=1883
+EXPERIMENT_DURATION=60
+ATTACK_RATE=1000
+I_UNDERSTAND_AUTHORIZED_TESTBED=yes
+I_HAVE_WRITTEN_AUTHORIZATION=no
+
+Periksa:
+
+./scripts/doctor.sh
+
+
+5. SETUP WINDOWS
+================
+
+Install Python 3 dan aktifkan Add Python to PATH.
+
+Buka PowerShell:
+
+cd C:\mqtt-dos-project\01_windows_client
+py -3 -m pip install -r requirements.txt
+Copy-Item config.env.example config.env
+notepad config.env
+
+Pastikan:
+
+DEPLOYMENT_MODE=local
+BROKER_HOST=192.168.56.10
+MQTT_PORT=1883
+EXPERIMENT_DURATION=60
+
+Periksa:
+
+powershell -ExecutionPolicy Bypass -File .\doctor.ps1
+
+
+6. JALANKAN PENGUJIAN
+======================
+
+RUN_ID dan SCENARIO harus sama pada ketiga mesin.
+
+Pengujian 1:
+
+RUN_ID=normal_01
+SCENARIO=normal
+
+Pengujian 2:
+
+RUN_ID=attack_01
+SCENARIO=syn_flood
+
+Pengujian 3:
+
+RUN_ID=mitigation_01
+SCENARIO=syn_flood_rate_limit
+
+Untuk setiap pengujian:
+
+1. Edit RUN_ID dan SCENARIO pada ketiga config.env.
+
+2. Jalankan Server A:
+
+   ./scripts/run_broker.sh
+
+3. Segera jalankan Windows:
+
+   powershell -ExecutionPolicy Bypass -File .\run_client.ps1
+
+4. Segera jalankan Server B:
+
+   ./scripts/run_attacker.sh
+
+5. Tunggu proses selesai, kemudian jalankan pada Server A:
+
+   ./scripts/finalize_broker.sh
+
+Pada normal, Server B tidak mengirim serangan.
+Pada syn_flood, rate limiting tidak aktif.
+Pada syn_flood_rate_limit, Server A mengaktifkannya otomatis.
+
+
+7. PINDAHKAN HASIL KE WINDOWS
+==============================
+
+Windows sudah membuat:
+
+experiments\<RUN_ID>\mqtt_client.csv
+
+Ambil dari Server A:
+
+experiments/<RUN_ID>/metadata.env
+experiments/<RUN_ID>/raw_flow.csv
+
+Contoh untuk normal_01, jalankan pada Windows:
+
+New-Item -ItemType Directory -Force .\experiments\normal_01
+
+scp mqttlab@192.168.56.10:/home/mqttlab/mqtt-dos-project/02_ubuntu_server_a_broker/experiments/normal_01/metadata.env .\experiments\normal_01\
+
+scp mqttlab@192.168.56.10:/home/mqttlab/mqtt-dos-project/02_ubuntu_server_a_broker/experiments/normal_01/raw_flow.csv .\experiments\normal_01\
+
+Ganti normal_01 sesuai RUN_ID. Dalam setiap folder harus ada:
+
+mqtt_client.csv
+metadata.env
+raw_flow.csv
+
+
+8. ANALISIS
+============
+
+Ubah RUN_ID pada config.env Windows sesuai run, kemudian:
+
+powershell -ExecutionPolicy Bypass -File .\analyze_run.ps1
+
+Lakukan untuk normal_01, attack_01, dan mitigation_01.
+
+Setelah semuanya selesai:
+
+powershell -ExecutionPolicy Bypass -File .\analyze_all.ps1
+
+Hasil:
+
+metrics\summary.csv
+metrics\comparisons.csv
+metrics\analysis_report.txt
+
+KPI:
+
+mqtt_success_rate      = semakin tinggi semakin baik
+mqtt_latency_median_ms = semakin rendah semakin baik
+mqtt_latency_p95_ms    = semakin rendah semakin baik
+syn_rate_mean          = rata-rata paket SYN per detik
+syn_rate_peak          = puncak paket SYN per detik
+
+
+9. PENGULANGAN
+===============
+
+Untuk penelitian, ulangi setiap skenario, misalnya:
+
+normal_01 sampai normal_05
+attack_01 sampai attack_05
+mitigation_01 sampai mitigation_05
+
+Jangan mengubah durasi, ATTACK_RATE, RL_RATE, RL_BURST, QoS, dan interval MQTT
+di tengah kelompok pengujian.
+
+
+10. JIKA TERJADI MASALAH
+=========================
+
+Broker tidak dapat diakses:
+
+sudo systemctl status mosquitto
+sudo ss -lntp | grep 1883
+
+Interface capture salah:
+
+ip -br address
+tshark -D
+
+TShark tidak memiliki izin:
+
+sudo dpkg-reconfigure wireshark-common
+sudo usermod -aG wireshark "$USER"
+
+Rate limiting masih aktif:
+
+./scripts/rate_limit.sh disable
+
+Analisis gagal:
+
+Pastikan folder run di Windows memiliki mqtt_client.csv, metadata.env, dan
+raw_flow.csv.
+
+
+URUTAN SINGKAT
+==============
+
+1. Samakan RUN_ID dan SCENARIO.
+2. Jalankan Server A.
+3. Jalankan Windows.
+4. Jalankan Server B.
+5. Finalisasi di Server A.
+6. Salin dua file Server A ke Windows.
+7. Jalankan analisis.

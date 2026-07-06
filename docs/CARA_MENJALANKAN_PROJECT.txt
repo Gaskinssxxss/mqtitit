@@ -1,0 +1,164 @@
+CARA MENJALANKAN PROJECT TIGA MESIN
+====================================
+
+A. SIAPKAN JARINGAN
+-------------------
+
+Gunakan Host-Only Adapter VirtualBox untuk jaringan pengujian. Contoh:
+
+Windows host       192.168.56.1
+Ubuntu Server A    192.168.56.10
+Ubuntu Server B    192.168.56.20
+
+Ubuntu A dan B boleh memiliki adapter NAT kedua untuk instalasi paket. Trafik
+penelitian tetap diarahkan melalui alamat Host-Only Ubuntu Server A.
+
+B. SIAPKAN FILE
+---------------
+
+Windows:
+- Gunakan seluruh isi folder 01_windows_client.
+
+Ubuntu Server A:
+- Salin folder 02_ubuntu_server_a_broker ke VM A.
+- Salin config.env.example menjadi config.env.
+- Beri izin eksekusi: chmod +x scripts/*.sh
+
+Ubuntu Server B:
+- Salin folder 03_ubuntu_server_b_attacker ke VM B.
+- Salin config.env.example menjadi config.env.
+- Beri izin eksekusi: chmod +x scripts/*.sh
+
+C. ATUR KONFIGURASI
+-------------------
+
+Pada ketiga mesin, samakan:
+
+RUN_ID=run01_normal
+SCENARIO=normal
+EXPERIMENT_DURATION=60
+DEPLOYMENT_MODE=local
+BROKER_HOST=192.168.56.10
+MQTT_PORT=1883
+
+Khusus Ubuntu Server A:
+
+CAPTURE_DURATION=75
+BROKER_CAPTURE_HOST=192.168.56.10
+BROKER_IFACE=enp0s8
+
+CAPTURE_DURATION dibuat lebih panjang daripada EXPERIMENT_DURATION agar
+seluruh proses client dan attacker tetap terekam meskipun Server A dimulai
+lebih dahulu.
+
+Nama interface tidak selalu enp0s8. Temukan interface yang memiliki alamat
+192.168.56.10 menggunakan perintah `ip address`, lalu isi BROKER_IFACE dengan
+nama tersebut.
+
+Khusus Ubuntu Server B pada testbed lokal yang sah:
+
+I_UNDERSTAND_AUTHORIZED_TESTBED=yes
+
+D. PERIKSA SETIAP MESIN
+-----------------------
+
+Windows PowerShell:
+
+powershell -ExecutionPolicy Bypass -File .\doctor.ps1
+
+Ubuntu Server A:
+
+./scripts/doctor.sh
+
+Ubuntu Server B:
+
+./scripts/doctor.sh
+
+Jangan mulai eksperimen sebelum pemeriksaan utama menunjukkan OK.
+
+E. JALANKAN SKENARIO NORMAL
+---------------------------
+
+Gunakan pada ketiga config.env:
+
+RUN_ID=run01_normal
+SCENARIO=normal
+
+Urutan:
+
+1. Ubuntu Server A: ./scripts/run_broker.sh
+2. Windows: powershell -ExecutionPolicy Bypass -File .\run_client.ps1
+3. Ubuntu Server B: ./scripts/run_attacker.sh
+
+Pada skenario normal, Server B akan menampilkan bahwa serangan tidak dijalankan.
+
+F. JALANKAN SKENARIO SYN FLOOD
+------------------------------
+
+Gunakan pada ketiga config.env:
+
+RUN_ID=run01_attack
+SCENARIO=syn_flood
+
+Urutan:
+
+1. Ubuntu Server A: ./scripts/run_broker.sh
+2. Windows: powershell -ExecutionPolicy Bypass -File .\run_client.ps1
+3. Ubuntu Server B: ./scripts/run_attacker.sh
+
+G. JALANKAN SKENARIO MITIGASI
+-----------------------------
+
+Gunakan pada ketiga config.env:
+
+RUN_ID=run01_mitigation
+SCENARIO=syn_flood_rate_limit
+
+Urutannya sama. Pada skenario ini, run_broker.sh mengaktifkan rate limiting
+sebelum capture dan menonaktifkannya kembali setelah capture selesai.
+
+H. KUMPULKAN DAN ANALISIS HASIL
+-------------------------------
+
+Setelah setiap skenario, pada Ubuntu Server A jalankan:
+
+./scripts/finalize_broker.sh
+
+Ambil dua file berikut:
+
+experiments/<RUN_ID>/metadata.env
+experiments/<RUN_ID>/raw_flow.csv
+
+Salin keduanya ke Windows:
+
+01_windows_client\experiments\<RUN_ID>\
+
+Folder Windows tersebut sudah memiliki mqtt_client.csv. Setelah ketiganya
+terkumpul, jalankan:
+
+powershell -ExecutionPolicy Bypass -File .\analyze_run.ps1
+
+Setelah semua pengulangan selesai:
+
+powershell -ExecutionPolicy Bypass -File .\analyze_all.ps1
+
+I. MODE CAMPUS DAN PUBLIC
+-------------------------
+
+Perbedaan mode hanya terletak pada alamat dan jalur jaringan:
+
+local:
+- BROKER_HOST adalah IP Host-Only Ubuntu Server A.
+
+campus:
+- BROKER_HOST adalah IP internal/VPN broker yang disetujui pengelola.
+
+public:
+- BROKER_HOST adalah IP/domain publik broker.
+- BROKER_CAPTURE_HOST dapat berupa IP privat yang terlihat di server akibat NAT.
+
+Pada mode campus/public, attacker hanya boleh dijalankan setelah ada izin
+tertulis dan konfigurasi berikut memang sengaja diubah:
+
+I_UNDERSTAND_AUTHORIZED_TESTBED=yes
+I_HAVE_WRITTEN_AUTHORIZATION=yes

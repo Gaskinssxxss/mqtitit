@@ -1,0 +1,266 @@
+# Blueprint Project Baru
+
+Dokumen ini menjelaskan konsep project versi baru dengan bahasa sederhana.
+
+## 1. Inti Project
+
+Project ini menguji broker MQTT milik Universitas Mataram.
+
+Yang ingin dibuktikan:
+
+```text
+Apakah broker MQTT terganggu saat menerima SYN flood?
+Apakah rate limiting bisa mengurangi gangguan tersebut?
+```
+
+Topik utama tidak berubah:
+
+```text
+DoS pada broker MQTT + mitigasi rate limiting
+```
+
+Yang berubah dari konsep lama adalah cara pengujian dibuat lebih fokus.
+
+## 2. Peran Setiap Mesin
+
+Project ini memakai tiga peran.
+
+```text
+Windows laptop
+├── VBox A: Ubuntu Server sebagai broker
+├── VBox B: Ubuntu Server sebagai attacker
+└── Windows sebagai client/perangkat IoT simulasi
+```
+
+### VBox A - Broker
+
+VBox A adalah target utama penelitian.
+
+Di sini berjalan:
+
+- Mosquitto sebagai broker MQTT.
+- Packet capture untuk merekam trafik yang masuk.
+- Rate limiting untuk membatasi trafik berlebihan.
+
+Kenapa capture dilakukan di broker?
+
+Karena broker adalah tempat trafik benar-benar diterima. Kalau data diambil dari host lain, data serangan bisa saja tidak terlihat lengkap.
+
+### VBox B - Attacker
+
+VBox B hanya dipakai untuk mengirim serangan SYN flood ke broker.
+
+Yang dikirim attacker bukan data suhu.
+
+Yang dikirim attacker adalah banyak permintaan koneksi ke broker.
+
+### Windows - Client IoT Simulasi
+
+Windows berperan sebagai perangkat IoT simulasi.
+
+Windows mengirim data MQTT normal ke broker, misalnya data suhu.
+
+Data ini dipakai untuk melihat apakah layanan MQTT masih berjalan baik saat broker diserang.
+
+## 2A. Mode Deployment
+
+Project ini bisa dijalankan dalam tiga mode.
+
+Mode local:
+
+```text
+Dipakai untuk demo lokal.
+Contoh: VBox A broker, VBox B attacker, Windows client.
+```
+
+Mode campus:
+
+```text
+Dipakai jika broker berada di jaringan kampus atau jaringan Universitas Mataram.
+Contoh: client/attacker berada di jaringan kampus atau VPN yang diizinkan.
+```
+
+Mode public:
+
+```text
+Dipakai jika broker bisa diakses dari internet.
+Contoh: broker punya IP publik atau domain publik dan port MQTT terbuka.
+```
+
+Mode campus dan public hanya boleh dipakai jika ada izin resmi.
+
+## 2B. Alamat Broker
+
+Project ini memakai dua alamat broker.
+
+```text
+BROKER_HOST
+BROKER_CAPTURE_HOST
+```
+
+BROKER_HOST adalah alamat broker yang dipakai oleh client dan attacker.
+
+BROKER_CAPTURE_HOST adalah alamat broker yang terlihat langsung di server broker saat packet capture dijalankan.
+
+Pada demo lokal, biasanya sama:
+
+```text
+BROKER_HOST=192.168.56.10
+BROKER_CAPTURE_HOST=192.168.56.10
+```
+
+Pada jaringan kampus atau broker publik, bisa berbeda:
+
+```text
+BROKER_HOST=mqtt.unram.ac.id
+BROKER_CAPTURE_HOST=10.10.10.5
+```
+
+Artinya, client mengakses broker lewat domain/IP luar, tetapi server broker menerima trafik pada IP internal.
+
+## 3. Bedanya Data Normal Dan Serangan
+
+Data normal:
+
+```text
+Windows client -> kirim data suhu -> broker MQTT
+```
+
+Serangan:
+
+```text
+VBox B attacker -> kirim banyak permintaan koneksi -> broker MQTT
+```
+
+Jadi:
+
+- Data suhu = trafik normal.
+- SYN flood = trafik serangan.
+- Broker = target yang menerima keduanya.
+
+## 4. Apa Itu SYN Flood Dalam Project Ini
+
+MQTT berjalan di atas koneksi TCP.
+
+Sebelum data MQTT bisa dikirim, perangkat harus membuka koneksi dulu ke broker.
+
+SYN adalah permintaan awal untuk membuka koneksi.
+
+SYN flood artinya attacker mengirim permintaan awal itu dalam jumlah sangat banyak.
+
+Efek yang ingin diuji:
+
+```text
+Banyak permintaan koneksi masuk
+Broker menjadi sibuk
+Data MQTT normal bisa terlambat atau gagal
+```
+
+## 5. Apa Itu Rate Limiting Dalam Project Ini
+
+Rate limiting adalah pembatas jumlah permintaan yang boleh masuk.
+
+Tujuannya:
+
+```text
+Jika permintaan koneksi terlalu banyak, sebagian dibatasi.
+```
+
+Dengan begitu broker diharapkan tidak kewalahan.
+
+## 6. Skenario Pengujian
+
+Project memakai tiga skenario.
+
+### Skenario 1 - Normal
+
+Hanya Windows client yang mengirim data MQTT ke broker.
+
+Belum ada serangan.
+
+Tujuan:
+
+```text
+Mengetahui kondisi broker saat normal.
+```
+
+### Skenario 2 - SYN Flood
+
+Windows client tetap mengirim data MQTT.
+
+VBox B attacker mengirim SYN flood ke broker.
+
+Tujuan:
+
+```text
+Melihat dampak serangan terhadap layanan MQTT.
+```
+
+### Skenario 3 - SYN Flood + Rate Limiting
+
+Windows client tetap mengirim data MQTT.
+
+VBox B attacker tetap mengirim SYN flood.
+
+VBox A broker mengaktifkan rate limiting.
+
+Tujuan:
+
+```text
+Melihat apakah rate limiting membuat layanan MQTT lebih stabil.
+```
+
+## 7. KPI Yang Diukur
+
+Project hanya memakai KPI yang mudah dijelaskan.
+
+### MQTT Success Rate
+
+Mengukur berapa banyak pesan MQTT yang berhasil.
+
+Jika success rate turun saat serangan, berarti layanan terganggu.
+
+### MQTT Latency
+
+Mengukur waktu yang dibutuhkan pesan MQTT sampai diterima kembali.
+
+Jika latency naik saat serangan, berarti layanan melambat.
+
+### SYN Packet Rate
+
+Mengukur jumlah permintaan koneksi SYN yang masuk ke broker.
+
+Jika SYN rate naik saat serangan, berarti serangan benar-benar terjadi.
+
+## 8. Indikator Project Berhasil
+
+Project dianggap berhasil jika pola ini terlihat:
+
+```text
+Normal:
+success rate tinggi, latency rendah, SYN rate rendah
+
+SYN flood:
+SYN rate naik, success rate turun atau latency naik
+
+SYN flood + rate limiting:
+success rate membaik atau latency lebih stabil dibanding saat SYN flood
+```
+
+## 9. Batasan Project
+
+Project ini tidak membahas:
+
+- pencurian data;
+- isi pesan MQTT yang dimanipulasi;
+- pencarian target oleh attacker;
+- banyak jenis serangan;
+- Web UI;
+- database;
+- rule engine.
+
+Project ini fokus pada:
+
+```text
+Availability broker MQTT saat menerima SYN flood.
+```

@@ -1,0 +1,24 @@
+KEAMANAN DAN BATAS PENGGUNAAN
+==============================
+
+Project ini dibuat untuk penelitian pada testbed sendiri atau jaringan yang
+memberikan izin tertulis.
+
+Dilarang:
+
+- mengarahkan SYN flood ke server yang tidak dimiliki;
+- menguji jaringan kampus tanpa persetujuan pengelola;
+- menguji broker publik tanpa izin tertulis;
+- memakai konfigurasi allow_anonymous=true pada server produksi.
+
+Pengaman program:
+
+- attacker memerlukan I_UNDERSTAND_AUTHORIZED_TESTBED=yes;
+- mode campus/public juga memerlukan I_HAVE_WRITTEN_AUTHORIZATION=yes;
+- target, port, durasi, dan attack rate dibaca dari config.env.
+
+Jangan memasukkan password, token, sertifikat pribadi, atau config.env ke
+repository. Gunakan config.env.example sebagai contoh konfigurasi.
+
+Jika menemukan masalah keamanan pada project, jangan mempublikasikan detail
+eksploitasi terhadap sistem nyata. Laporkan kepada pemilik repository.
