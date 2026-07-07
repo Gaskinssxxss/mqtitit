@@ -67,7 +67,8 @@ Syarat:
 - Mosquitto sudah aktif di Ubuntu Server A.
 - Project sudah dipull pada Windows, Server A, dan Server B.
 - Jika belum memakai SSH key, PowerShell akan meminta password SSH.
-- Jika sudo belum aktif, PowerShell juga akan meminta password sudo Ubuntu.
+- Saat capture/attack dimulai, PowerShell akan meminta password sudo Ubuntu.
+- Tidak perlu tekan Ctrl+C. Capture akan berhenti sendiri sesuai -CaptureDuration.
 
 Dari Windows:
 

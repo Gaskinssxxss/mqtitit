@@ -92,18 +92,19 @@ Write-Host "========================================"
 
 Write-Host "[INFO] Cek SSH ke Server A."
 Invoke-SshCommand -Target $serverATarget -Command "echo server-a-ok"
-Write-Host "[INFO] Cek sudo Server A untuk capture/rate limiting."
-Invoke-SshCommand -Target $serverATarget -Command "sudo -v"
 
 if ($Scenario -ne "normal") {
     Write-Host "[INFO] Cek SSH ke Server B."
     Invoke-SshCommand -Target $serverBTarget -Command "echo server-b-ok"
-    Write-Host "[INFO] Cek sudo Server B untuk hping3."
-    Invoke-SshCommand -Target $serverBTarget -Command "sudo -v"
 }
 
 $brokerProcess = Start-SshCommand -Target $serverATarget -Command $brokerCommand -Name "broker-capture"
 Start-Sleep -Seconds $StartDelaySeconds
+
+if ($Scenario -ne "normal") {
+    $attackerProcess = Start-SshCommand -Target $serverBTarget -Command $attackerCommand -Name "attacker"
+    Start-Sleep -Seconds 2
+}
 
 Write-Host "[RUN] Windows client"
 & powershell @clientCommand
@@ -111,8 +112,8 @@ if ($LASTEXITCODE -ne 0) {
     throw "Windows client gagal dengan kode $LASTEXITCODE."
 }
 
-if ($Scenario -ne "normal") {
-    $attackerProcess = Start-SshCommand -Target $serverBTarget -Command $attackerCommand -Name "attacker"
+if ($Scenario -ne "normal" -and $attackerProcess) {
+    Write-Host "[WAIT] Menunggu attacker Server B selesai."
     $attackerProcess.WaitForExit()
     if ($attackerProcess.ExitCode -ne 0) {
         throw "Attacker gagal dengan kode $($attackerProcess.ExitCode)."
