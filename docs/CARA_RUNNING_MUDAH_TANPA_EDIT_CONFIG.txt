@@ -168,6 +168,7 @@ experiments/<RUN_ID>/server_a_broker/metadata.env
 Backup hasil Server B:
 
 experiments/<RUN_ID>/server_b_attacker/attack.log
+experiments/<RUN_ID>/server_b_attacker/controller_attacker.out
 
 Kalau menjalankan tiga terminal manual, file dari Server A dan Server B tetap
 perlu disalin sendiri.

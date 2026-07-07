@@ -19,7 +19,7 @@ param(
     [string]$ServerBProject = "~/mqtitit/03_ubuntu_server_b_attacker",
 
     [int]$StartDelaySeconds = 12,
-    [int]$AttackAuthDelaySeconds = 15
+    [int]$AttackStartDelaySeconds = 3
 )
 
 $ErrorActionPreference = "Stop"
@@ -101,7 +101,7 @@ $clientCommand = @(
     "-BrokerHost", $BrokerHost,
     "-Duration", "$Duration"
 )
-$attackerCommand = "cd $serverBProjectRemote && sudo -v && ./scripts/run_attacker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --duration $Duration --attack-rate $AttackRate --yes-local"
+$attackerCommand = "cd $serverBProjectRemote && mkdir -p experiments/$RunId && sudo -v && nohup ./scripts/run_attacker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --duration $Duration --attack-rate $AttackRate --yes-local > experiments/$RunId/controller_attacker.out 2>&1 < /dev/null & echo attacker-started"
 $finalizeCommand = "cd $serverAProjectRemote && ./scripts/finalize_broker.sh"
 
 Write-Host "========================================"
@@ -129,23 +129,16 @@ $brokerProcess = Start-SshCommand -Target $serverATarget -Command $brokerCommand
 Start-Sleep -Seconds $StartDelaySeconds
 
 if ($Scenario -ne "normal") {
-    $attackerProcess = Start-SshCommand -Target $serverBTarget -Command $attackerCommand -Name "attacker"
-    Write-Host "[INFO] Menunggu $AttackAuthDelaySeconds detik agar autentikasi attacker selesai sebelum client berjalan."
-    Start-Sleep -Seconds $AttackAuthDelaySeconds
+    Write-Host "[START] attacker pada $serverBTarget"
+    Invoke-SshCommand -Target $serverBTarget -Command $attackerCommand
+    Write-Host "[INFO] Menunggu $AttackStartDelaySeconds detik agar attacker mulai mengirim trafik."
+    Start-Sleep -Seconds $AttackStartDelaySeconds
 }
 
 Write-Host "[RUN] Windows client"
 & powershell @clientCommand
 if ($LASTEXITCODE -ne 0) {
     throw "Windows client gagal dengan kode $LASTEXITCODE."
-}
-
-if ($Scenario -ne "normal" -and $attackerProcess) {
-    Write-Host "[WAIT] Menunggu attacker Server B selesai."
-    $attackerProcess.WaitForExit()
-    if ($attackerProcess.ExitCode -ne 0) {
-        throw "Attacker gagal dengan kode $($attackerProcess.ExitCode)."
-    }
 }
 
 Write-Host "[WAIT] Menunggu capture Server A selesai."
@@ -169,6 +162,7 @@ Copy-Item -Force (Join-Path $serverADirectory "raw_flow.csv") (Join-Path $runDir
 if ($Scenario -ne "normal") {
     Write-Host "[COPY] Mengambil hasil Server B ke Windows."
     Copy-RemoteFile -Target $serverBTarget -RemotePath "$serverBProjectRemote/experiments/$RunId/attack.log" -LocalDirectory $serverBDirectory
+    Copy-RemoteFile -Target $serverBTarget -RemotePath "$serverBProjectRemote/experiments/$RunId/controller_attacker.out" -LocalDirectory $serverBDirectory
 }
 
 Write-Host "[OK] Eksperimen selesai."
@@ -177,4 +171,5 @@ Write-Host "       Windows : experiments\$RunId\mqtt_client.csv"
 Write-Host "       Server A: experiments\$RunId\server_a_broker\"
 if ($Scenario -ne "normal") {
     Write-Host "       Server B: experiments\$RunId\server_b_attacker\attack.log"
+    Write-Host "                 experiments\$RunId\server_b_attacker\controller_attacker.out"
 }
