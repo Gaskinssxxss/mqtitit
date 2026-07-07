@@ -56,7 +56,7 @@ PowerShell 3 = SSH ke Ubuntu Server B / Attacker
 3. POWERSHELL 1 - WINDOWS CLIENT
 --------------------------------
 
-Di PowerShell 1, masuk ke folder Windows client:
+Di PowerShell 1, ketik command berikut untuk masuk ke folder Windows client:
 
 cd D:\mqtitit\01_windows_client
 
@@ -79,13 +79,13 @@ Broker akan dipastikan dari terminal Server A.
 4. POWERSHELL 2 - SSH KE UBUNTU SERVER A
 ----------------------------------------
 
-Di PowerShell 2:
+Di PowerShell 2, ketik command berikut untuk masuk SSH ke Ubuntu Server A:
 
 ssh server-a@192.168.56.10
 
 Masukkan password Ubuntu Server A.
 
-Setelah masuk ke Ubuntu Server A:
+Setelah berhasil login SSH ke Ubuntu Server A, ketik command berikut untuk masuk ke folder project:
 
 cd ~/mqtitit
 git pull origin main
@@ -119,13 +119,13 @@ Nama interface ini dipakai pada command --iface.
 5. POWERSHELL 3 - SSH KE UBUNTU SERVER B
 ----------------------------------------
 
-Di PowerShell 3:
+Di PowerShell 3, ketik command berikut untuk masuk SSH ke Ubuntu Server B:
 
 ssh server-b@192.168.56.20
 
 Masukkan password Ubuntu Server B.
 
-Setelah masuk ke Ubuntu Server B:
+Setelah berhasil login SSH ke Ubuntu Server B, ketik command berikut untuk masuk ke folder project:
 
 cd ~/mqtitit
 git pull origin main
