@@ -4,6 +4,17 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 load_config() {
+  local prior_OUTPUT_DIR="${OUTPUT_DIR:-}"
+  local prior_RUN_ID="${RUN_ID:-}"
+  local prior_SCENARIO="${SCENARIO:-}"
+  local prior_EXPERIMENT_DURATION="${EXPERIMENT_DURATION:-}"
+  local prior_DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-}"
+  local prior_BROKER_HOST="${BROKER_HOST:-}"
+  local prior_MQTT_PORT="${MQTT_PORT:-}"
+  local prior_ATTACK_RATE="${ATTACK_RATE:-}"
+  local prior_I_UNDERSTAND_AUTHORIZED_TESTBED="${I_UNDERSTAND_AUTHORIZED_TESTBED:-}"
+  local prior_I_HAVE_WRITTEN_AUTHORIZATION="${I_HAVE_WRITTEN_AUTHORIZATION:-}"
+
   if [[ -f "$PROJECT_ROOT/config.env" ]]; then
     # shellcheck disable=SC1091
     source "$PROJECT_ROOT/config.env"
@@ -11,6 +22,17 @@ load_config() {
     # shellcheck disable=SC1091
     source "$PROJECT_ROOT/config.env.example"
   fi
+
+  [[ -n "$prior_OUTPUT_DIR" ]] && OUTPUT_DIR="$prior_OUTPUT_DIR"
+  [[ -n "$prior_RUN_ID" ]] && RUN_ID="$prior_RUN_ID"
+  [[ -n "$prior_SCENARIO" ]] && SCENARIO="$prior_SCENARIO"
+  [[ -n "$prior_EXPERIMENT_DURATION" ]] && EXPERIMENT_DURATION="$prior_EXPERIMENT_DURATION"
+  [[ -n "$prior_DEPLOYMENT_MODE" ]] && DEPLOYMENT_MODE="$prior_DEPLOYMENT_MODE"
+  [[ -n "$prior_BROKER_HOST" ]] && BROKER_HOST="$prior_BROKER_HOST"
+  [[ -n "$prior_MQTT_PORT" ]] && MQTT_PORT="$prior_MQTT_PORT"
+  [[ -n "$prior_ATTACK_RATE" ]] && ATTACK_RATE="$prior_ATTACK_RATE"
+  [[ -n "$prior_I_UNDERSTAND_AUTHORIZED_TESTBED" ]] && I_UNDERSTAND_AUTHORIZED_TESTBED="$prior_I_UNDERSTAND_AUTHORIZED_TESTBED"
+  [[ -n "$prior_I_HAVE_WRITTEN_AUTHORIZATION" ]] && I_HAVE_WRITTEN_AUTHORIZATION="$prior_I_HAVE_WRITTEN_AUTHORIZATION"
 
   : "${OUTPUT_DIR:=experiments}"
   : "${RUN_ID:=run01_normal}"

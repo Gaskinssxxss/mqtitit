@@ -1,0 +1,137 @@
+CARA RUNNING MUDAH TANPA EDIT CONFIG BERKALI-KALI
+=================================================
+
+Tujuan perubahan ini:
+- config.env cukup dipakai sebagai default awal.
+- Saat pengujian, tidak perlu bolak-balik ubah RUN_ID dan SCENARIO.
+- Setiap skenario dijalankan dengan parameter command.
+
+Contoh IP:
+- Ubuntu Server A / Broker   : 192.168.56.10
+- Ubuntu Server B / Attacker : 192.168.56.20
+- Windows Client             : 192.168.56.1
+
+Kalau IP broker berbeda, ganti 192.168.56.10 pada command.
+
+
+1. SETUP SEKALI SAJA
+-------------------
+
+Windows:
+
+cd butnowismqttbtw\01_windows_client
+Copy-Item config.env.example config.env
+py -3 -m pip install -r requirements.txt
+
+Ubuntu Server A:
+
+cd ~/butnowismqttbtw/02_ubuntu_server_a_broker
+cp config.env.example config.env
+chmod +x scripts/*.sh
+ip -br address
+
+Catat nama interface yang punya IP broker.
+Contoh: enp0s8.
+
+Ubuntu Server B:
+
+cd ~/butnowismqttbtw/03_ubuntu_server_b_attacker
+cp config.env.example config.env
+chmod +x scripts/*.sh
+
+
+2. SKENARIO NORMAL
+------------------
+
+Gunakan RUN_ID yang sama pada Windows dan Server A.
+Contoh: normal_01.
+
+Ubuntu Server A:
+
+./scripts/run_broker.sh --scenario normal --run-id normal_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+
+Windows:
+
+powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -Duration 60
+
+Ubuntu Server B tidak perlu menjalankan serangan untuk skenario normal.
+
+
+3. SKENARIO SYN FLOOD
+---------------------
+
+Gunakan RUN_ID yang sama pada ketiga mesin.
+Contoh: attack_01.
+
+Ubuntu Server A:
+
+./scripts/run_broker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+
+Windows:
+
+powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60
+
+Ubuntu Server B:
+
+./scripts/run_attacker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
+
+
+4. SKENARIO RATE LIMITING
+-------------------------
+
+Gunakan RUN_ID yang sama pada ketiga mesin.
+Contoh: mitigation_01.
+
+Ubuntu Server A:
+
+./scripts/run_broker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+
+Windows:
+
+powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60
+
+Ubuntu Server B:
+
+./scripts/run_attacker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
+
+
+5. URUTAN JALAN YANG BENAR
+--------------------------
+
+Untuk setiap skenario:
+
+1. Jalankan Server A dulu.
+2. Jalankan Windows client.
+3. Jalankan Server B attacker khusus skenario serangan.
+4. Tunggu semua selesai.
+5. Di Server A jalankan:
+
+./scripts/finalize_broker.sh
+
+
+6. FILE HASIL YANG DIAMBIL
+--------------------------
+
+Dari Windows:
+
+experiments/<RUN_ID>/mqtt_client.csv
+
+Dari Ubuntu Server A:
+
+experiments/<RUN_ID>/capture.pcapng
+experiments/<RUN_ID>/raw_flow.csv
+experiments/<RUN_ID>/metadata.env
+
+Dari Ubuntu Server B:
+
+experiments/<RUN_ID>/attack.log
+
+
+7. CATATAN PENTING
+------------------
+
+- RUN_ID harus sama dalam satu skenario.
+- SCENARIO harus sama dalam satu skenario.
+- Jangan menyerang IP selain Ubuntu Server A.
+- --yes-local hanya untuk testbed sendiri yang memang diizinkan.
+- Kalau nama interface bukan enp0s8, ganti --iface sesuai hasil ip -br address.

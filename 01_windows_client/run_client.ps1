@@ -1,5 +1,33 @@
+param(
+    [ValidateSet("normal", "syn_flood", "syn_flood_rate_limit")]
+    [string]$Scenario,
+    [string]$RunId,
+    [string]$BrokerHost,
+    [int]$MqttPort,
+    [int]$Duration
+)
+
 . "$PSScriptRoot\common.ps1"
 Import-ProjectConfig
+
+if ($Scenario) {
+    [Environment]::SetEnvironmentVariable("SCENARIO", $Scenario, "Process")
+    if (-not $RunId) {
+        $RunId = "$(Get-Date -Format 'yyyyMMdd_HHmmss')_$Scenario"
+    }
+}
+if ($RunId) {
+    [Environment]::SetEnvironmentVariable("RUN_ID", $RunId, "Process")
+}
+if ($BrokerHost) {
+    [Environment]::SetEnvironmentVariable("BROKER_HOST", $BrokerHost, "Process")
+}
+if ($MqttPort) {
+    [Environment]::SetEnvironmentVariable("MQTT_PORT", "$MqttPort", "Process")
+}
+if ($Duration) {
+    [Environment]::SetEnvironmentVariable("EXPERIMENT_DURATION", "$Duration", "Process")
+}
 
 $runDirectory = Get-RunDirectory
 New-Item -ItemType Directory -Force -Path $runDirectory | Out-Null

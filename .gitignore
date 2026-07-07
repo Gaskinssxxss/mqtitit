@@ -22,6 +22,7 @@ logs/
 raw/
 metrics/
 metrics_smoke/
+test/
 *.pcap
 *.pcapng
 *_raw_flow.csv

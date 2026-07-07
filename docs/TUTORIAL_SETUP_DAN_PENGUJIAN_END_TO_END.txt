@@ -326,3 +326,12 @@ URUTAN SINGKAT
 5. Finalisasi di Server A.
 6. Salin dua file Server A ke Windows.
 7. Jalankan analisis.
+CATATAN TERBARU
+===============
+
+Untuk menjalankan skenario tanpa edit RUN_ID dan SCENARIO berkali-kali,
+pakai dokumen:
+
+docs/CARA_RUNNING_MUDAH_TANPA_EDIT_CONFIG.txt
+
+Tutorial di bawah ini tetap berguna untuk memahami setup lengkap.

@@ -22,7 +22,9 @@ Persiapan:
 6. Jalankan: ./scripts/doctor.sh
 
 Setiap pengujian:
-1. Samakan RUN_ID dan SCENARIO dengan Windows dan Ubuntu Server B.
-2. Jalankan: ./scripts/run_broker.sh
+1. Untuk cara mudah tanpa edit config berkali-kali, baca:
+   ../docs/CARA_RUNNING_MUDAH_TANPA_EDIT_CONFIG.txt
+2. Jalankan contoh:
+   ./scripts/run_broker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
 3. Setelah capture selesai: ./scripts/finalize_broker.sh
 4. Salin metadata.env dan raw_flow.csv dari experiments/<RUN_ID>/ ke Windows.

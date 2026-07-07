@@ -18,10 +18,11 @@ Persiapan:
 5. Jalankan: ./scripts/doctor.sh
 
 Setiap pengujian:
-1. Samakan RUN_ID dan SCENARIO dengan Windows dan Ubuntu Server A.
-2. Untuk normal: jalankan script; program tidak mengirim serangan.
-3. Untuk syn_flood atau syn_flood_rate_limit:
-   ./scripts/run_attacker.sh
+1. Untuk cara mudah tanpa edit config berkali-kali, baca:
+   ../docs/CARA_RUNNING_MUDAH_TANPA_EDIT_CONFIG.txt
+2. Untuk normal, Server B tidak perlu menjalankan serangan.
+3. Untuk syn_flood atau syn_flood_rate_limit, jalankan contoh:
+   ./scripts/run_attacker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
 
 Mode campus/public membutuhkan izin tertulis dan nilai:
 I_HAVE_WRITTEN_AUTHORIZATION=yes

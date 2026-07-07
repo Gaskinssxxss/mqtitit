@@ -1,6 +1,16 @@
 CARA MENJALANKAN PROJECT TIGA MESIN
 ====================================
 
+CATATAN TERBARU
+---------------
+
+Untuk menjalankan eksperimen tanpa edit RUN_ID dan SCENARIO berkali-kali,
+pakai panduan yang lebih mudah:
+
+docs/CARA_RUNNING_MUDAH_TANPA_EDIT_CONFIG.txt
+
+Dokumen ini tetap disimpan sebagai penjelasan alur lengkap.
+
 A. SIAPKAN JARINGAN
 -------------------
 

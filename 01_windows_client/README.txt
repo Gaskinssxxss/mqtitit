@@ -9,7 +9,8 @@ Fungsi:
 
 File yang dijalankan:
 - doctor.ps1       : memeriksa Python, dependency, dan koneksi broker.
-- run_client.ps1   : menjalankan client MQTT.
+- run_client.ps1   : menjalankan client MQTT. Bisa memakai parameter -Scenario,
+                     -RunId, -BrokerHost, dan -Duration.
 - analyze_run.ps1  : menganalisis satu RUN_ID.
 - analyze_all.ps1  : membandingkan seluruh hasil pengujian.
 
@@ -21,6 +22,8 @@ Persiapan pertama:
 5. Jalankan: powershell -ExecutionPolicy Bypass -File .\doctor.ps1
 
 Aturan penting:
+- Untuk cara mudah tanpa edit config berkali-kali, baca:
+  ../docs/CARA_RUNNING_MUDAH_TANPA_EDIT_CONFIG.txt
 - RUN_ID dan SCENARIO harus sama pada ketiga mesin.
 - Setelah pengujian selesai, salin metadata.env dan raw_flow.csv dari
   Ubuntu Server A ke folder experiments\<RUN_ID>\ pada Windows.

@@ -4,6 +4,26 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 load_config() {
+  local prior_PROJECT_NAME="${PROJECT_NAME:-}"
+  local prior_OUTPUT_DIR="${OUTPUT_DIR:-}"
+  local prior_RUN_ID="${RUN_ID:-}"
+  local prior_SCENARIO="${SCENARIO:-}"
+  local prior_EXPERIMENT_DURATION="${EXPERIMENT_DURATION:-}"
+  local prior_CAPTURE_DURATION="${CAPTURE_DURATION:-}"
+  local prior_DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-}"
+  local prior_BROKER_HOST="${BROKER_HOST:-}"
+  local prior_BROKER_CAPTURE_HOST="${BROKER_CAPTURE_HOST:-}"
+  local prior_MQTT_PORT="${MQTT_PORT:-}"
+  local prior_MQTT_TOPIC="${MQTT_TOPIC:-}"
+  local prior_BROKER_IFACE="${BROKER_IFACE:-}"
+  local prior_MQTT_CLIENT_ID_PREFIX="${MQTT_CLIENT_ID_PREFIX:-}"
+  local prior_MQTT_QOS="${MQTT_QOS:-}"
+  local prior_MQTT_INTERVAL_MS="${MQTT_INTERVAL_MS:-}"
+  local prior_MQTT_TIMEOUT_SEC="${MQTT_TIMEOUT_SEC:-}"
+  local prior_ATTACK_RATE="${ATTACK_RATE:-}"
+  local prior_RL_RATE="${RL_RATE:-}"
+  local prior_RL_BURST="${RL_BURST:-}"
+
   if [[ -f "$PROJECT_ROOT/config.env" ]]; then
     # shellcheck disable=SC1091
     source "$PROJECT_ROOT/config.env"
@@ -11,6 +31,26 @@ load_config() {
     # shellcheck disable=SC1091
     source "$PROJECT_ROOT/config.env.example"
   fi
+
+  [[ -n "$prior_PROJECT_NAME" ]] && PROJECT_NAME="$prior_PROJECT_NAME"
+  [[ -n "$prior_OUTPUT_DIR" ]] && OUTPUT_DIR="$prior_OUTPUT_DIR"
+  [[ -n "$prior_RUN_ID" ]] && RUN_ID="$prior_RUN_ID"
+  [[ -n "$prior_SCENARIO" ]] && SCENARIO="$prior_SCENARIO"
+  [[ -n "$prior_EXPERIMENT_DURATION" ]] && EXPERIMENT_DURATION="$prior_EXPERIMENT_DURATION"
+  [[ -n "$prior_CAPTURE_DURATION" ]] && CAPTURE_DURATION="$prior_CAPTURE_DURATION"
+  [[ -n "$prior_DEPLOYMENT_MODE" ]] && DEPLOYMENT_MODE="$prior_DEPLOYMENT_MODE"
+  [[ -n "$prior_BROKER_HOST" ]] && BROKER_HOST="$prior_BROKER_HOST"
+  [[ -n "$prior_BROKER_CAPTURE_HOST" ]] && BROKER_CAPTURE_HOST="$prior_BROKER_CAPTURE_HOST"
+  [[ -n "$prior_MQTT_PORT" ]] && MQTT_PORT="$prior_MQTT_PORT"
+  [[ -n "$prior_MQTT_TOPIC" ]] && MQTT_TOPIC="$prior_MQTT_TOPIC"
+  [[ -n "$prior_BROKER_IFACE" ]] && BROKER_IFACE="$prior_BROKER_IFACE"
+  [[ -n "$prior_MQTT_CLIENT_ID_PREFIX" ]] && MQTT_CLIENT_ID_PREFIX="$prior_MQTT_CLIENT_ID_PREFIX"
+  [[ -n "$prior_MQTT_QOS" ]] && MQTT_QOS="$prior_MQTT_QOS"
+  [[ -n "$prior_MQTT_INTERVAL_MS" ]] && MQTT_INTERVAL_MS="$prior_MQTT_INTERVAL_MS"
+  [[ -n "$prior_MQTT_TIMEOUT_SEC" ]] && MQTT_TIMEOUT_SEC="$prior_MQTT_TIMEOUT_SEC"
+  [[ -n "$prior_ATTACK_RATE" ]] && ATTACK_RATE="$prior_ATTACK_RATE"
+  [[ -n "$prior_RL_RATE" ]] && RL_RATE="$prior_RL_RATE"
+  [[ -n "$prior_RL_BURST" ]] && RL_BURST="$prior_RL_BURST"
 
   : "${PROJECT_NAME:=mqtt-dos-rate-limit}"
   : "${OUTPUT_DIR:=experiments}"
