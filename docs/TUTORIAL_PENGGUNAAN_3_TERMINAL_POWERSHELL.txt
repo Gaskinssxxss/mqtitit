@@ -1,0 +1,297 @@
+TUTORIAL PENGGUNAAN PROJECT DENGAN 3 TERMINAL POWERSHELL
+=========================================================
+
+Tujuan tutorial ini:
+- Menjalankan pengujian dari laptop Windows.
+- Ubuntu Server A dipakai sebagai broker MQTT dan tempat capture.
+- Ubuntu Server B dipakai sebagai attacker SYN flood.
+- Windows dipakai sebagai client MQTT dan tempat mengumpulkan hasil.
+
+Contoh alamat:
+- Ubuntu Server A / Broker   : 192.168.56.10
+- Ubuntu Server B / Attacker : 192.168.56.20
+- Windows                    : 192.168.56.1
+
+Kalau IP berbeda, sesuaikan command.
+
+
+1. BUKA VIRTUALBOX
+------------------
+
+1. Buka aplikasi VirtualBox.
+2. Jalankan VM Ubuntu Server A.
+3. Jalankan VM Ubuntu Server B.
+4. Tunggu sampai kedua VM menampilkan halaman login.
+
+Login di masing-masing VM jika diperlukan:
+
+Ubuntu Server A:
+
+username: server-a
+password: isi password Ubuntu Server A
+
+Ubuntu Server B:
+
+username: server-b
+password: isi password Ubuntu Server B
+
+Catatan:
+- Password tidak akan terlihat saat diketik. Itu normal.
+- Jangan matikan VM selama pengujian berjalan.
+
+
+2. BUKA 3 POWERSHELL DI WINDOWS
+-------------------------------
+
+Buka 3 jendela PowerShell.
+Lebih aman: klik kanan PowerShell, pilih "Run as administrator".
+
+Fungsi tiap PowerShell:
+
+PowerShell 1 = Windows client dan collect hasil
+PowerShell 2 = SSH ke Ubuntu Server A / Broker
+PowerShell 3 = SSH ke Ubuntu Server B / Attacker
+
+
+3. POWERSHELL 1 - WINDOWS CLIENT
+--------------------------------
+
+Di PowerShell 1, masuk ke folder Windows client:
+
+cd D:\mqtitit\01_windows_client
+
+Kalau baru pertama kali atau setelah pull update:
+
+git pull origin main
+
+Install dependency jika belum pernah:
+
+py -3 -m pip install -r requirements.txt
+
+Cek koneksi dasar ke broker:
+
+powershell -ExecutionPolicy Bypass -File .\doctor.ps1
+
+Kalau broker belum hidup, doctor bisa memberi warning. Itu tidak apa-apa.
+Broker akan dipastikan dari terminal Server A.
+
+
+4. POWERSHELL 2 - SSH KE UBUNTU SERVER A
+----------------------------------------
+
+Di PowerShell 2:
+
+ssh server-a@192.168.56.10
+
+Masukkan password Ubuntu Server A.
+
+Setelah masuk ke Ubuntu Server A:
+
+cd ~/mqtitit
+git pull origin main
+cd 02_ubuntu_server_a_broker
+chmod +x scripts/*.sh
+
+Cek tool Server A:
+
+./scripts/doctor.sh
+
+Pastikan Mosquitto aktif:
+
+sudo systemctl status mosquitto
+
+Kalau belum aktif:
+
+sudo systemctl enable --now mosquitto
+
+Cek nama interface:
+
+ip -br address
+
+Cari interface yang punya IP 192.168.56.10.
+Contoh biasanya:
+
+enp0s8
+
+Nama interface ini dipakai pada command --iface.
+
+
+5. POWERSHELL 3 - SSH KE UBUNTU SERVER B
+----------------------------------------
+
+Di PowerShell 3:
+
+ssh server-b@192.168.56.20
+
+Masukkan password Ubuntu Server B.
+
+Setelah masuk ke Ubuntu Server B:
+
+cd ~/mqtitit
+git pull origin main
+cd 03_ubuntu_server_b_attacker
+chmod +x scripts/*.sh
+
+Cek tool Server B:
+
+./scripts/doctor.sh
+
+
+6. URUTAN MENJALANKAN SKENARIO NORMAL
+-------------------------------------
+
+RUN_ID contoh:
+
+normal_01
+
+PowerShell 2 / Server A:
+
+./scripts/run_broker.sh --scenario normal --run-id normal_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+
+Setelah Server A mulai capture, pindah ke PowerShell 1 / Windows:
+
+powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -Duration 60
+
+Untuk skenario normal, PowerShell 3 / Server B tidak perlu menjalankan attacker.
+
+Setelah capture Server A selesai, di PowerShell 2 jalankan:
+
+./scripts/finalize_broker.sh
+
+Lalu ambil hasil dari PowerShell 1 / Windows:
+
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId normal_01 -ServerAUser server-a -SkipServerB
+
+
+7. URUTAN MENJALANKAN SKENARIO SYN FLOOD
+----------------------------------------
+
+RUN_ID contoh:
+
+attack_01
+
+PowerShell 2 / Server A:
+
+./scripts/run_broker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+
+Setelah Server A mulai capture, pindah ke PowerShell 3 / Server B:
+
+./scripts/run_attacker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
+
+Setelah attacker mulai jalan, pindah ke PowerShell 1 / Windows:
+
+powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60
+
+Tunggu sampai:
+- client Windows selesai,
+- attacker Server B selesai,
+- capture Server A selesai.
+
+Setelah capture Server A selesai, di PowerShell 2 jalankan:
+
+./scripts/finalize_broker.sh
+
+Lalu ambil hasil dari PowerShell 1 / Windows:
+
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId attack_01 -ServerAUser server-a -ServerBUser server-b
+
+
+8. URUTAN MENJALANKAN SKENARIO RATE LIMITING
+--------------------------------------------
+
+RUN_ID contoh:
+
+mitigation_01
+
+PowerShell 2 / Server A:
+
+./scripts/run_broker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+
+Pada skenario ini Server A akan meminta password sudo karena rate limiting aktif.
+
+Setelah Server A mulai capture, pindah ke PowerShell 3 / Server B:
+
+./scripts/run_attacker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
+
+Setelah attacker mulai jalan, pindah ke PowerShell 1 / Windows:
+
+powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60
+
+Tunggu sampai semua selesai.
+
+Setelah capture Server A selesai, di PowerShell 2 jalankan:
+
+./scripts/finalize_broker.sh
+
+Lalu ambil hasil dari PowerShell 1 / Windows:
+
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId mitigation_01 -ServerAUser server-a -ServerBUser server-b
+
+
+9. LOKASI HASIL DI WINDOWS
+--------------------------
+
+Semua hasil akan terkumpul di:
+
+D:\mqtitit\01_windows_client\experiments\<RUN_ID>\
+
+Contoh:
+
+D:\mqtitit\01_windows_client\experiments\attack_01\
+
+Isi penting:
+
+mqtt_client.csv
+metadata.env
+raw_flow.csv
+server_a_broker\capture.pcapng
+server_a_broker\capture.log
+server_a_broker\metadata.env
+server_a_broker\raw_flow.csv
+server_b_attacker\attack.log
+
+Untuk skenario normal, tidak ada file attack.log karena attacker tidak dijalankan.
+
+
+10. CATATAN PENTING
+-------------------
+
+- RUN_ID harus sama di Windows, Server A, dan Server B.
+- Jangan pakai RUN_ID yang sama untuk pengujian baru.
+- Kalau pengujian gagal, buat RUN_ID baru.
+- Jangan tekan Ctrl+C kecuali proses benar-benar macet.
+- Capture Server A memang lebih lama, misalnya 75 detik.
+- Client dan attacker biasanya 60 detik.
+- Untuk SYN flood, pastikan target selalu 192.168.56.10 atau IP Server A yang benar.
+- Jangan menyerang IP perangkat lain.
+
+
+11. CONTOH RUN_ID YANG DISARANKAN
+---------------------------------
+
+normal_01
+attack_01
+mitigation_01
+
+Kalau mengulang:
+
+normal_02
+attack_02
+mitigation_02
+
+
+12. JIKA ADA ERROR
+------------------
+
+Jika error terjadi, kirim teks error lengkap.
+
+File yang biasanya perlu dicek:
+
+Windows:
+D:\mqtitit\01_windows_client\experiments\<RUN_ID>\mqtt_client.csv
+
+Server A:
+~/mqtitit/02_ubuntu_server_a_broker/experiments/<RUN_ID>/capture.log
+
+Server B:
+~/mqtitit/03_ubuntu_server_b_attacker/experiments/<RUN_ID>/attack.log
