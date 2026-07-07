@@ -11,6 +11,8 @@ File yang dijalankan:
 - doctor.ps1       : memeriksa Python, dependency, dan koneksi broker.
 - run_client.ps1   : menjalankan client MQTT. Bisa memakai parameter -Scenario,
                      -RunId, -BrokerHost, dan -Duration.
+- run_experiment.ps1 : menjalankan Server A, Windows client, dan Server B dari
+                       satu terminal PowerShell menggunakan SSH.
 - analyze_run.ps1  : menganalisis satu RUN_ID.
 - analyze_all.ps1  : membandingkan seluruh hasil pengujian.
 

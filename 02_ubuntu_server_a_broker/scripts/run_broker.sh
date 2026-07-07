@@ -113,7 +113,7 @@ EXP_DIR="$PROJECT_ROOT/$OUTPUT_DIR/$RUN_ID"
 export RUN_ID SCENARIO EXPERIMENT_DURATION CAPTURE_DURATION DEPLOYMENT_MODE
 export BROKER_HOST BROKER_CAPTURE_HOST BROKER_IFACE RL_RATE RL_BURST EXP_DIR
 
-echo "[INFO] Memeriksa izin administrator untuk pengaturan rate limiting."
+echo "[INFO] Memeriksa izin administrator untuk capture dan rate limiting bila diperlukan."
 sudo -v
 
 ensure_exp_dir

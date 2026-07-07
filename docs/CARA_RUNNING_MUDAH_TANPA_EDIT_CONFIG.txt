@@ -5,6 +5,7 @@ Tujuan perubahan ini:
 - config.env cukup dipakai sebagai default awal.
 - Saat pengujian, tidak perlu bolak-balik ubah RUN_ID dan SCENARIO.
 - Setiap skenario dijalankan dengan parameter command.
+- Bisa juga menjalankan semua dari satu terminal PowerShell menggunakan SSH.
 
 Contoh IP:
 - Ubuntu Server A / Broker   : 192.168.56.10
@@ -55,6 +56,40 @@ Windows:
 powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -Duration 60
 
 Ubuntu Server B tidak perlu menjalankan serangan untuk skenario normal.
+
+
+2B. CARA PALING MUDAH: SATU TERMINAL POWERSHELL
+-----------------------------------------------
+
+Syarat:
+- Windows sudah bisa SSH ke Ubuntu Server A.
+- Windows sudah bisa SSH ke Ubuntu Server B.
+- Mosquitto sudah aktif di Ubuntu Server A.
+- Project sudah dipull pada Windows, Server A, dan Server B.
+- Jika belum memakai SSH key, PowerShell akan meminta password SSH.
+- Jika sudo belum aktif, PowerShell juga akan meminta password sudo Ubuntu.
+
+Dari Windows:
+
+cd butnowismqttbtw\01_windows_client
+
+Normal:
+
+powershell -ExecutionPolicy Bypass -File .\run_experiment.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -ServerAUser server-a -ServerBUser server-b -BrokerIface enp0s8
+
+SYN flood:
+
+powershell -ExecutionPolicy Bypass -File .\run_experiment.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -ServerAUser server-a -ServerBUser server-b -BrokerIface enp0s8 -AttackRate 1000
+
+Rate limiting:
+
+powershell -ExecutionPolicy Bypass -File .\run_experiment.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -ServerAUser server-a -ServerBUser server-b -BrokerIface enp0s8 -AttackRate 1000
+
+Kalau username Ubuntu berbeda, ubah -ServerAUser dan -ServerBUser.
+Kalau path project di Ubuntu berbeda, tambahkan:
+
+-ServerAProject "~/mqtitit/02_ubuntu_server_a_broker"
+-ServerBProject "~/mqtitit/03_ubuntu_server_b_attacker"
 
 
 3. SKENARIO SYN FLOOD
