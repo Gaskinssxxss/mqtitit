@@ -40,7 +40,7 @@ function Invoke-SshCommand {
 
     Write-Host "[SSH] $Target"
     Write-Host "      $Command"
-    ssh $Target $Command
+    ssh -tt $Target $Command
     if ($LASTEXITCODE -ne 0) {
         throw "SSH command gagal pada $Target dengan kode $LASTEXITCODE."
     }
@@ -57,7 +57,7 @@ function Start-SshCommand {
     Write-Host "        $Command"
     return Start-Process `
         -FilePath $ssh.Source `
-        -ArgumentList @($Target, $Command) `
+        -ArgumentList @("-tt", $Target, $Command) `
         -NoNewWindow `
         -PassThru
 }
@@ -65,7 +65,7 @@ function Start-SshCommand {
 $serverATarget = "$ServerAUser@$ServerAHost"
 $serverBTarget = "$ServerBUser@$ServerBHost"
 
-$brokerCommand = "cd $ServerAProject && ./scripts/run_broker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --iface $BrokerIface --duration $Duration --capture-duration $CaptureDuration"
+$brokerCommand = "cd $ServerAProject && sudo -v && ./scripts/run_broker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --iface $BrokerIface --duration $Duration --capture-duration $CaptureDuration"
 $clientCommand = @(
     "-ExecutionPolicy", "Bypass",
     "-File", ".\run_client.ps1",
@@ -74,7 +74,7 @@ $clientCommand = @(
     "-BrokerHost", $BrokerHost,
     "-Duration", "$Duration"
 )
-$attackerCommand = "cd $ServerBProject && ./scripts/run_attacker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --duration $Duration --attack-rate $AttackRate --yes-local"
+$attackerCommand = "cd $ServerBProject && sudo -v && ./scripts/run_attacker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --duration $Duration --attack-rate $AttackRate --yes-local"
 $finalizeCommand = "cd $ServerAProject && ./scripts/finalize_broker.sh"
 
 Write-Host "========================================"
