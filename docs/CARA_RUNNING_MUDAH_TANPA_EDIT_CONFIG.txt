@@ -5,7 +5,8 @@ Tujuan perubahan ini:
 - config.env cukup dipakai sebagai default awal.
 - Saat pengujian, tidak perlu bolak-balik ubah RUN_ID dan SCENARIO.
 - Setiap skenario dijalankan dengan parameter command.
-- Bisa juga menjalankan semua dari satu terminal PowerShell menggunakan SSH.
+- Eksperimen tetap dijalankan dari tiga terminal agar lebih stabil.
+- Setelah selesai, Windows bisa menarik file mentah dari Server A dan B.
 
 Contoh IP:
 - Ubuntu Server A / Broker   : 192.168.56.10
@@ -20,13 +21,13 @@ Kalau IP broker berbeda, ganti 192.168.56.10 pada command.
 
 Windows:
 
-cd butnowismqttbtw\01_windows_client
+cd mqtitit\01_windows_client
 Copy-Item config.env.example config.env
 py -3 -m pip install -r requirements.txt
 
 Ubuntu Server A:
 
-cd ~/butnowismqttbtw/02_ubuntu_server_a_broker
+cd ~/mqtitit/02_ubuntu_server_a_broker
 cp config.env.example config.env
 chmod +x scripts/*.sh
 ip -br address
@@ -36,7 +37,7 @@ Contoh: enp0s8.
 
 Ubuntu Server B:
 
-cd ~/butnowismqttbtw/03_ubuntu_server_b_attacker
+cd ~/mqtitit/03_ubuntu_server_b_attacker
 cp config.env.example config.env
 chmod +x scripts/*.sh
 
@@ -58,35 +59,32 @@ powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunI
 Ubuntu Server B tidak perlu menjalankan serangan untuk skenario normal.
 
 
-2B. CARA PALING MUDAH: SATU TERMINAL POWERSHELL
------------------------------------------------
+2B. AMBIL HASIL DARI WINDOWS
+----------------------------
 
 Syarat:
 - Windows sudah bisa SSH ke Ubuntu Server A.
 - Windows sudah bisa SSH ke Ubuntu Server B.
-- Mosquitto sudah aktif di Ubuntu Server A.
 - Project sudah dipull pada Windows, Server A, dan Server B.
 - Jika belum memakai SSH key, PowerShell akan meminta password SSH.
-- Saat capture/attack dimulai, PowerShell akan meminta password sudo Ubuntu.
-- Tidak perlu tekan Ctrl+C. Capture akan berhenti sendiri sesuai -CaptureDuration.
-- Setelah selesai, file hasil Server A dan Server B otomatis dicopy ke folder
+- Setelah tiga terminal selesai, file hasil Server A dan Server B dicopy ke folder:
   experiments\<RUN_ID>\ pada Windows.
 
 Dari Windows:
 
-cd butnowismqttbtw\01_windows_client
+cd mqtitit\01_windows_client
 
 Normal:
 
-powershell -ExecutionPolicy Bypass -File .\run_experiment.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -ServerAUser server-a -ServerBUser server-b -BrokerIface enp0s8
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId normal_01 -ServerAUser server-a -SkipServerB
 
 SYN flood:
 
-powershell -ExecutionPolicy Bypass -File .\run_experiment.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -ServerAUser server-a -ServerBUser server-b -BrokerIface enp0s8 -AttackRate 1000
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId attack_01 -ServerAUser server-a -ServerBUser server-b
 
 Rate limiting:
 
-powershell -ExecutionPolicy Bypass -File .\run_experiment.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -ServerAUser server-a -ServerBUser server-b -BrokerIface enp0s8 -AttackRate 1000
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId mitigation_01 -ServerAUser server-a -ServerBUser server-b
 
 Kalau username Ubuntu berbeda, ubah -ServerAUser dan -ServerBUser.
 Kalau path project di Ubuntu berbeda, tambahkan:
@@ -146,11 +144,13 @@ Untuk setiap skenario:
 
 ./scripts/finalize_broker.sh
 
+6. Di Windows jalankan collect_results.ps1 sesuai RUN_ID.
+
 
 6. FILE HASIL YANG DIAMBIL
 --------------------------
 
-Jika memakai run_experiment.ps1 dari Windows, file hasil otomatis terkumpul.
+Jika memakai collect_results.ps1 dari Windows, file hasil otomatis terkumpul.
 
 Lokasi utama:
 
@@ -168,7 +168,6 @@ experiments/<RUN_ID>/server_a_broker/metadata.env
 Backup hasil Server B:
 
 experiments/<RUN_ID>/server_b_attacker/attack.log
-experiments/<RUN_ID>/server_b_attacker/controller_attacker.out
 
 Kalau menjalankan tiga terminal manual, file dari Server A dan Server B tetap
 perlu disalin sendiri.
