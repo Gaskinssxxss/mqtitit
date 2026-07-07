@@ -31,6 +31,10 @@ $ssh = Get-Command ssh -ErrorAction SilentlyContinue
 if (-not $ssh) {
     throw "ssh tidak ditemukan di Windows. Install/OpenSSH Client dulu."
 }
+$scp = Get-Command scp -ErrorAction SilentlyContinue
+if (-not $scp) {
+    throw "scp tidak ditemukan di Windows. Install/OpenSSH Client dulu."
+}
 
 function Invoke-SshCommand {
     param(
@@ -62,10 +66,32 @@ function Start-SshCommand {
         -PassThru
 }
 
+function Copy-RemoteFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Target,
+        [Parameter(Mandatory = $true)][string]$RemotePath,
+        [Parameter(Mandatory = $true)][string]$LocalDirectory
+    )
+
+    New-Item -ItemType Directory -Force -Path $LocalDirectory | Out-Null
+    $source = "${Target}:$RemotePath"
+    Write-Host "[COPY] $source"
+    Write-Host "       -> $LocalDirectory"
+    & $scp.Source $source $LocalDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw "Gagal copy $source ke $LocalDirectory dengan kode $LASTEXITCODE."
+    }
+}
+
 $serverATarget = "$ServerAUser@$ServerAHost"
 $serverBTarget = "$ServerBUser@$ServerBHost"
+$serverAProjectRemote = $ServerAProject.Replace("~", "/home/$ServerAUser")
+$serverBProjectRemote = $ServerBProject.Replace("~", "/home/$ServerBUser")
+$runDirectory = Join-Path (Join-Path $PSScriptRoot "experiments") $RunId
+$serverADirectory = Join-Path $runDirectory "server_a_broker"
+$serverBDirectory = Join-Path $runDirectory "server_b_attacker"
 
-$brokerCommand = "cd $ServerAProject && sudo -v && ./scripts/run_broker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --iface $BrokerIface --duration $Duration --capture-duration $CaptureDuration"
+$brokerCommand = "cd $serverAProjectRemote && sudo -v && ./scripts/run_broker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --iface $BrokerIface --duration $Duration --capture-duration $CaptureDuration"
 $clientCommand = @(
     "-ExecutionPolicy", "Bypass",
     "-File", ".\run_client.ps1",
@@ -74,8 +100,8 @@ $clientCommand = @(
     "-BrokerHost", $BrokerHost,
     "-Duration", "$Duration"
 )
-$attackerCommand = "cd $ServerBProject && sudo -v && ./scripts/run_attacker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --duration $Duration --attack-rate $AttackRate --yes-local"
-$finalizeCommand = "cd $ServerAProject && ./scripts/finalize_broker.sh"
+$attackerCommand = "cd $serverBProjectRemote && sudo -v && ./scripts/run_attacker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --duration $Duration --attack-rate $AttackRate --yes-local"
+$finalizeCommand = "cd $serverAProjectRemote && ./scripts/finalize_broker.sh"
 
 Write-Host "========================================"
 Write-Host "RUN EKSPERIMEN MQTT"
@@ -129,10 +155,26 @@ if ($brokerProcess.ExitCode -ne 0) {
 Write-Host "[RUN] Finalize capture di Server A."
 Invoke-SshCommand -Target $serverATarget -Command $finalizeCommand
 
-Write-Host "[OK] Eksperimen selesai."
-Write-Host "[INFO] Ambil hasil dari:"
-Write-Host "       Windows : experiments\$RunId\mqtt_client.csv"
-Write-Host "       Server A: $ServerAProject/experiments/$RunId/"
+Write-Host "[COPY] Mengambil hasil Server A ke Windows."
+Copy-RemoteFile -Target $serverATarget -RemotePath "$serverAProjectRemote/experiments/$RunId/metadata.env" -LocalDirectory $serverADirectory
+Copy-RemoteFile -Target $serverATarget -RemotePath "$serverAProjectRemote/experiments/$RunId/capture.log" -LocalDirectory $serverADirectory
+Copy-RemoteFile -Target $serverATarget -RemotePath "$serverAProjectRemote/experiments/$RunId/capture.pcapng" -LocalDirectory $serverADirectory
+Copy-RemoteFile -Target $serverATarget -RemotePath "$serverAProjectRemote/experiments/$RunId/raw_flow.csv" -LocalDirectory $serverADirectory
+
+Copy-Item -Force (Join-Path $serverADirectory "metadata.env") (Join-Path $runDirectory "metadata.env")
+Copy-Item -Force (Join-Path $serverADirectory "raw_flow.csv") (Join-Path $runDirectory "raw_flow.csv")
+
 if ($Scenario -ne "normal") {
-    Write-Host "       Server B: $ServerBProject/experiments/$RunId/attack.log"
+    Write-Host "[COPY] Mengambil hasil Server B ke Windows."
+    Copy-RemoteFile -Target $serverBTarget -RemotePath "$serverBProjectRemote/experiments/$RunId/attack.log" -LocalDirectory $serverBDirectory
 }
+
+Write-Host "[OK] Eksperimen selesai."
+Write-Host "[INFO] Hasil sudah dikumpulkan ke:"
+Write-Host "       Windows : experiments\$RunId\mqtt_client.csv"
+Write-Host "       Server A: experiments\$RunId\server_a_broker\"
+if ($Scenario -ne "normal") {
+    Write-Host "       Server B: experiments\$RunId\server_b_attacker\attack.log"
+}
+Write-Host "[INFO] Untuk analisis satu run, jalankan:"
+Write-Host "       powershell -ExecutionPolicy Bypass -File .\analyze_run.ps1 -RunId $RunId"

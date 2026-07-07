@@ -69,6 +69,8 @@ Syarat:
 - Jika belum memakai SSH key, PowerShell akan meminta password SSH.
 - Saat capture/attack dimulai, PowerShell akan meminta password sudo Ubuntu.
 - Tidak perlu tekan Ctrl+C. Capture akan berhenti sendiri sesuai -CaptureDuration.
+- Setelah selesai, file hasil Server A dan Server B otomatis dicopy ke folder
+  experiments\<RUN_ID>\ pada Windows.
 
 Dari Windows:
 
@@ -148,19 +150,31 @@ Untuk setiap skenario:
 6. FILE HASIL YANG DIAMBIL
 --------------------------
 
-Dari Windows:
+Jika memakai run_experiment.ps1 dari Windows, file hasil otomatis terkumpul.
+
+Lokasi utama:
 
 experiments/<RUN_ID>/mqtt_client.csv
-
-Dari Ubuntu Server A:
-
-experiments/<RUN_ID>/capture.pcapng
-experiments/<RUN_ID>/raw_flow.csv
 experiments/<RUN_ID>/metadata.env
+experiments/<RUN_ID>/raw_flow.csv
 
-Dari Ubuntu Server B:
+Backup hasil Server A:
 
-experiments/<RUN_ID>/attack.log
+experiments/<RUN_ID>/server_a_broker/capture.pcapng
+experiments/<RUN_ID>/server_a_broker/capture.log
+experiments/<RUN_ID>/server_a_broker/raw_flow.csv
+experiments/<RUN_ID>/server_a_broker/metadata.env
+
+Backup hasil Server B:
+
+experiments/<RUN_ID>/server_b_attacker/attack.log
+
+Kalau menjalankan tiga terminal manual, file dari Server A dan Server B tetap
+perlu disalin sendiri.
+
+Analisis satu run:
+
+powershell -ExecutionPolicy Bypass -File .\analyze_run.ps1 -RunId <RUN_ID>
 
 
 7. CATATAN PENTING

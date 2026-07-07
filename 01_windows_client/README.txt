@@ -12,7 +12,8 @@ File yang dijalankan:
 - run_client.ps1   : menjalankan client MQTT. Bisa memakai parameter -Scenario,
                      -RunId, -BrokerHost, dan -Duration.
 - run_experiment.ps1 : menjalankan Server A, Windows client, dan Server B dari
-                       satu terminal PowerShell menggunakan SSH.
+                       satu terminal PowerShell menggunakan SSH, lalu menyalin
+                       hasil Server A/B ke Windows dengan SCP.
 - analyze_run.ps1  : menganalisis satu RUN_ID.
 - analyze_all.ps1  : membandingkan seluruh hasil pengujian.
 
