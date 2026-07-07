@@ -1,0 +1,260 @@
+REFERENSI AWAL DRAFT SKRIPSI
+============================
+
+Topik:
+Analisis Serangan DoS pada Broker MQTT dan Mitigasinya Menggunakan Rate Limiting
+pada Server Universitas Mataram
+
+Catatan:
+- Daftar ini adalah referensi awal untuk menyusun draft skripsi.
+- Fokus utama: IoT, MQTT, broker MQTT, ESP32, DoS/SYN flood, hping3,
+  packet capture/Wireshark/tshark, firewall, iptables, rate limiting,
+  dan hardening server.
+- Mayoritas referensi diambil dari jurnal/prosiding/repository Indonesia.
+- Format daftar pustaka final masih perlu disesuaikan dengan gaya kampus
+  atau gaya IEEE/APA yang diminta pembimbing.
+
+
+A. REFERENSI INTI UNTUK TOPIK MQTT, IOT, DAN BROKER
+---------------------------------------------------
+
+1. Azwar, H., & Gary, F. (2025).
+   Implementasi Transport Layer Security dengan Algoritma AES untuk
+   Meningkatkan Keamanan Komunikasi pada Jaringan IoT Berbasis MQTT
+   Menggunakan ESP32.
+   Jurnal Elektro dan Mesin Terapan, 11(1), 60-66.
+   DOI: https://doi.org/10.35143/elementer.v11i1.6478
+   Link: https://jurnal.pcr.ac.id/index.php/elementer/article/view/6478
+   Kegunaan:
+   - Untuk BAB II bagian MQTT, ESP32, dan keamanan komunikasi IoT.
+   - Relevan karena membahas MQTT pada ESP32 dan aspek keamanan komunikasi.
+
+2. Anggoro, W. W., & Widiasari, I. R. (2024).
+   MQTT Protocol-Based ESP-32 Smarthome with Multi-sensor.
+   Journal of Electrical, Electronic, Information, and Communication Technology.
+   Link: https://jurnal.uns.ac.id/jeeict/article/view/84007
+   Kegunaan:
+   - Untuk menjelaskan penggunaan ESP32 dan MQTT pada sistem IoT.
+   - Bisa dipakai pada BAB II bagian implementasi MQTT pada perangkat IoT.
+
+3. Evaluasi Kinerja Sistem IoT Berbasis ESP32 dan MQTT untuk Pemantauan
+   Kelembapan Ruangan. (2026).
+   Link: https://jurnal.mdp.ac.id/index.php/msc/article/view/15226
+   Kegunaan:
+   - Untuk mendukung pembahasan performa sistem IoT berbasis ESP32 dan MQTT.
+   - Relevan untuk BAB II dan BAB III bagian pengukuran performa.
+
+4. Penerapan Protokol MQTT pada Sistem Otomatisasi Fotosintesis Tanaman
+   Aquascape Berbasis Internet of Things. (2024).
+   Link: https://jurnal.untan.ac.id/index.php/jcskommipa/article/download/88183/75676604599
+   Kegunaan:
+   - Untuk menjelaskan konsep publisher, broker, subscriber, dan topik MQTT.
+   - Cocok untuk BAB II bagian arsitektur MQTT.
+
+5. System Testing and Performance Evaluation of an MQTT-Based IoT System.
+   (2026).
+   Link: https://jurnal.untan.ac.id/index.php/Elkha/article/download/98306/pdf
+   Kegunaan:
+   - Untuk mendukung bagian pengujian performa sistem MQTT.
+   - Bisa dipakai pada BAB III bagian metode evaluasi performa.
+
+6. Design and Hardening of an MQTT Broker Server on AWS EC2 for IoT
+   Communication Security. (2025).
+   Link: https://jurnal.polinema.ac.id/index.php/jartel/article/download/8336/5197
+   Kegunaan:
+   - Referensi sangat relevan untuk broker MQTT.
+   - Membahas hardening, firewall, SSL/TLS, pembatasan akses port, monitoring
+     log, serta pengujian DoS/DDoS pada server broker.
+   - Cocok untuk BAB II bagian keamanan broker MQTT dan BAB III bagian mitigasi.
+
+
+B. REFERENSI INTI UNTUK DOS, SYN FLOOD, DAN HPING3
+--------------------------------------------------
+
+7. Simulasi Serangan Denial of Service (DoS) Menggunakan Hping3 melalui
+   Kali Linux. (2024).
+   Journal of Internet and Software Engineering.
+   Link: https://journal.pubmedia.id/index.php/pjise/article/download/2654/2731/4959
+   Kegunaan:
+   - Untuk BAB II bagian konsep DoS dan penggunaan hping3.
+   - Untuk BAB III bagian skenario serangan.
+
+8. Erlangga, M. F. E., Fahriani, N., & Tantri, A. H. (2024).
+   Deteksi Serangan Syn Flood pada Server Menggunakan Metode Algoritma
+   K-Nearest Neightbor.
+   SEMASTER: Seminar Nasional Teknologi Informasi & Ilmu Komputer, 2(1), 68-72.
+   Link: https://journal.unilak.ac.id/index.php/Semaster/article/view/18458
+   Kegunaan:
+   - Untuk menjelaskan SYN flood sebagai serangan yang membuat koneksi
+     setengah terbuka dan membebani server.
+   - Relevan untuk BAB II dan BAB III.
+
+9. Pengujian Kehandalan Jaringan terhadap TCP/SYN Flood Attack dengan
+   Metode Simulasi Serangan Lokal.
+   Link: https://repository.unkris.ac.id/3393/1/Pengujian%20Kehandalan%20Jaringan%20Terhadap%20TCPSYN%20Flood%20Attack%20Dengan%20Metode%20Simulasi%20Serangan%20Lokal.pdf
+   Kegunaan:
+   - Referensi spesifik untuk pengujian SYN flood secara lokal.
+   - Cocok untuk mendukung skenario testbed lokal.
+
+10. Analisis Forensik terhadap Serangan DDoS Ping of Death Menggunakan
+    Tools NMAP dan HPING3.
+    Link: https://ejournal.uin-suka.ac.id/saintek/cybersecurity/article/download/3423/2545
+    Kegunaan:
+    - Untuk mendukung penggunaan hping3 dan observasi trafik serangan.
+    - Relevan pada BAB II bagian tools serangan dan analisis jaringan.
+
+11. Analisis Keamanan Website terhadap Serangan DDoS.
+    Link: https://djournals.com/klik/article/download/830/595/3803
+    Kegunaan:
+    - Untuk mendukung konsep bahwa peningkatan jumlah paket serangan dapat
+      menambah beban server dan memperlambat layanan.
+    - Bisa dipakai pada BAB II bagian dampak DoS terhadap layanan.
+
+
+C. REFERENSI UNTUK FIREWALL, RATE LIMITING, DAN MITIGASI
+--------------------------------------------------------
+
+12. Implementation of Rate Limiting and Telegram Bot for HTTP GET Flood
+    Attack Mitigation. (2025).
+    Journal of Information System and Application Development.
+    Link: https://jurnal.unmer.ac.id/index.php/jisad/article/view/15398
+    Kegunaan:
+    - Referensi penting untuk konsep rate limiting.
+    - Menunjukkan firewall + rate limiting dapat menurunkan beban CPU dan
+      menjaga stabilitas server saat serangan.
+    - Cocok untuk BAB II dan BAB III bagian mitigasi.
+
+13. Implementasi Firewall Menggunakan Iptables untuk Melindungi Server dari
+    Serangan DDoS. (2024).
+    Journal of Internet and Software Engineering.
+    Link: https://journal.pubmedia.id/index.php/pjise/article/view/2564
+    Kegunaan:
+    - Untuk mendukung penggunaan firewall Linux dalam mitigasi DDoS.
+    - Relevan dengan konsep nftables/iptables pada server broker.
+
+14. Peningkatan Keamanan Router Mikrotik terhadap Serangan Denial of Service
+    (DoS). (2020).
+    Jurnal Sistim Informasi dan Teknologi.
+    Link: https://jsisfotek.org/index.php/JSisfotek/article/download/32/32
+    Kegunaan:
+    - Untuk mendukung pembahasan mitigasi DoS menggunakan firewall/filtering.
+    - Bisa dipakai pada BAB II bagian mitigasi jaringan.
+
+15. Mengatasi Serangan DDoS SYN Flood dengan Metode Rate Filtering.
+    Prosiding SENTIMETER.
+    Link: https://prosiding.sentimeter.nusaputra.ac.id/index.php/prosiding/article/download/99/99
+    Kegunaan:
+    - Referensi sangat dekat dengan topik mitigasi SYN flood menggunakan
+      rate filtering/rate limiting.
+    - Cocok untuk BAB II dan BAB III.
+
+16. Peningkatan Keamanan Server GraphQL terhadap Serangan Batch Attack
+    Menggunakan Metode Rate-Limiting.
+    Link: https://journal.uin-suka.ac.id/saintek/cybersecurity/article/download/4718/2805
+    Kegunaan:
+    - Bukan MQTT, tetapi berguna untuk menjelaskan prinsip rate limiting
+      sebagai pembatasan laju request agar server tetap tersedia.
+
+
+D. REFERENSI UNTUK PACKET CAPTURE, WIRESHARK, DAN ANALISIS TRAFIK
+------------------------------------------------------------------
+
+17. Putri, A. F., Hadi, A., & Rusdiana, L. (2025).
+    Analisis Trafik Jaringan Menggunakan Wireshark untuk Deteksi Serangan
+    Deauthentication pada Perangkat Kamera Wi-Fi.
+    Jurnal Saintekom, 15(2), 165-176.
+    DOI: https://doi.org/10.33020/saintekom.v15i2.967
+    Link: https://www.ojs.stmikplk.ac.id/index.php/saintekom/article/view/967
+    Kegunaan:
+    - Untuk mendukung penggunaan Wireshark/packet capture dalam analisis
+      trafik jaringan dan deteksi anomali.
+
+18. Implementasi Packet Sniffing dengan Wireshark untuk Analisis Lalu
+    Lintas Jaringan.
+    Link: https://journaledutech.com/index.php/great/article/view/714
+    Kegunaan:
+    - Untuk BAB II bagian packet sniffing dan analisis lalu lintas jaringan.
+
+19. Analisis Trafik Jaringan Menggunakan Wireshark untuk Monitoring Aktivitas
+    Jaringan.
+    Link: https://journal.jisti.unipol.ac.id/index.php/jisti/article/view/281
+    Kegunaan:
+    - Untuk mendukung penggunaan Wireshark sebagai alat analisis trafik.
+
+20. Implementasi Network Traffic Analysis untuk Mendeteksi Anomali Jaringan
+    pada Twitter/X dan Instagram.
+    Digital Business and Entrepreneurship Journal, 2(2), 88-96.
+    Link: https://journal.feb.uniku.ac.id/digibe/article/download/31/25
+    Kegunaan:
+    - Untuk mendukung konsep network traffic analysis dan anomali trafik.
+
+
+E. REFERENSI PENDUKUNG UNTUK IOT DAN KEAMANAN IOT
+-------------------------------------------------
+
+21. Sistem Embedded Internet of Thing.
+    Link: https://repository.ubharajaya.ac.id/36266/1/13.%20Wowon%2C%20dkk%20-%20Sistem%20Embedded%20%20Internet%20of%20Thing%20%286%29.pdf
+    Kegunaan:
+    - Untuk BAB II bagian sistem embedded dan keamanan IoT.
+    - Ada pembahasan risiko port terbuka dan serangan DoS pada jaringan.
+
+22. IoT Implementation in Water Level Monitoring System Using ESP32 and
+    Antares Platform.
+    Link: https://jurnal.polibatam.ac.id/index.php/JI/article/download/12814/3590/41190
+    Kegunaan:
+    - Untuk mendukung penggunaan ESP32 dalam sistem monitoring IoT real-time.
+
+23. Data Acquisition System on Cocoa Bean Fermenter Using ESP32 and MQTT.
+    Link: https://jurnal.poliupg.ac.id/index.php/JTE/article/download/5108/4053
+    Kegunaan:
+    - Untuk mendukung bahwa ESP32 dan MQTT umum dipakai dalam sistem akuisisi
+      data sensor real-time.
+
+24. Studi Kasus Sensor IoT.
+    Link: https://repository.uninus.ac.id/701/1/Ahmad%20Kurnia_41037002211024.pdf
+    Kegunaan:
+    - Untuk memperkuat latar belakang bahwa sistem IoT menghadapi tantangan
+      keamanan dan privasi data.
+
+
+F. REFERENSI YANG PALING PRIORITAS UNTUK DRAFT AWAL
+---------------------------------------------------
+
+Kalau draft skripsi ingin mulai cepat, gunakan dulu referensi berikut:
+
+1. Azwar & Gary (2025) - MQTT, ESP32, keamanan komunikasi IoT.
+2. Design and Hardening of an MQTT Broker Server on AWS EC2 - broker MQTT dan hardening.
+3. Simulasi Serangan DoS menggunakan Hping3 - skenario DoS/hping3.
+4. Deteksi Serangan SYN Flood pada Server - konsep SYN flood.
+5. Rate limiting untuk mitigasi HTTP GET Flood - konsep rate limiting.
+6. Implementasi firewall iptables untuk melindungi server dari DDoS - mitigasi firewall.
+7. Penerapan MQTT pada sistem IoT - konsep publisher, broker, subscriber.
+8. Analisis trafik jaringan menggunakan Wireshark - packet capture dan analisis trafik.
+
+
+G. PEMETAAN REFERENSI KE BAB SKRIPSI
+------------------------------------
+
+BAB I - Pendahuluan:
+- Referensi IoT, MQTT, keamanan IoT, DoS, dan kebutuhan ketersediaan layanan.
+- Gunakan referensi nomor 1, 2, 6, 7, 12.
+
+BAB II - Tinjauan Pustaka:
+- IoT dan ESP32: nomor 1, 2, 21, 22, 23.
+- MQTT dan broker: nomor 1, 4, 5, 6.
+- DoS dan SYN flood: nomor 7, 8, 9, 10, 11.
+- Packet capture dan analisis trafik: nomor 17, 18, 19, 20.
+- Rate limiting/firewall: nomor 12, 13, 14, 15, 16.
+
+BAB III - Metodologi:
+- Testbed dan skenario serangan: nomor 7, 8, 9.
+- Capture dan raw flow: nomor 17, 18, 19, 20.
+- Mitigasi rate limiting: nomor 12, 13, 15.
+
+BAB IV - Hasil dan Pembahasan:
+- Gunakan referensi nomor 7, 8, 12, 13, 17 untuk membandingkan hasil
+  pengujian normal, SYN flood, dan rate limiting.
+
+BAB V - Penutup:
+- Gunakan referensi yang paling relevan untuk menegaskan kontribusi,
+  keterbatasan, dan saran pengembangan.
