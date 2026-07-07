@@ -1,13 +1,5 @@
-param(
-    [string]$RunId
-)
-
 . "$PSScriptRoot\common.ps1"
 Import-ProjectConfig
-
-if ($RunId) {
-    [Environment]::SetEnvironmentVariable("RUN_ID", $RunId, "Process")
-}
 
 $runDirectory = Get-RunDirectory
 if (-not (Test-Path $runDirectory)) {

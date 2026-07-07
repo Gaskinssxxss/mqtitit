@@ -176,5 +176,3 @@ Write-Host "       Server A: experiments\$RunId\server_a_broker\"
 if ($Scenario -ne "normal") {
     Write-Host "       Server B: experiments\$RunId\server_b_attacker\attack.log"
 }
-Write-Host "[INFO] Untuk analisis satu run, jalankan:"
-Write-Host "       powershell -ExecutionPolicy Bypass -File .\analyze_run.ps1 -RunId $RunId"

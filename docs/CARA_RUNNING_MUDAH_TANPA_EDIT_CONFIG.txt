@@ -172,11 +172,6 @@ experiments/<RUN_ID>/server_b_attacker/attack.log
 Kalau menjalankan tiga terminal manual, file dari Server A dan Server B tetap
 perlu disalin sendiri.
 
-Analisis satu run:
-
-powershell -ExecutionPolicy Bypass -File .\analyze_run.ps1 -RunId <RUN_ID>
-
-
 7. CATATAN PENTING
 ------------------
 
