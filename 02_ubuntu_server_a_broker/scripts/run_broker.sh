@@ -113,18 +113,17 @@ EXP_DIR="$PROJECT_ROOT/$OUTPUT_DIR/$RUN_ID"
 export RUN_ID SCENARIO EXPERIMENT_DURATION CAPTURE_DURATION DEPLOYMENT_MODE
 export BROKER_HOST BROKER_CAPTURE_HOST BROKER_IFACE RL_RATE RL_BURST EXP_DIR
 
-echo "[INFO] Memeriksa izin administrator untuk capture dan rate limiting bila diperlukan."
-sudo -v
-
 ensure_exp_dir
 write_metadata
 
 if [[ "$SCENARIO" == "syn_flood_rate_limit" ]]; then
+  echo "[INFO] Memeriksa izin administrator untuk rate limiting."
+  sudo -v
   "$SCRIPT_DIR/rate_limit.sh" enable
   "$SCRIPT_DIR/rate_limit.sh" status > "$EXP_DIR/nft_before_capture.txt" 2>&1 || true
   trap '"$SCRIPT_DIR/rate_limit.sh" status > "$EXP_DIR/nft_after_capture.txt" 2>&1 || true; "$SCRIPT_DIR/rate_limit.sh" disable' EXIT
 else
-  "$SCRIPT_DIR/rate_limit.sh" disable >/dev/null 2>&1 || true
+  echo "[INFO] Rate limiting tidak diaktifkan untuk skenario $SCENARIO."
 fi
 
 "$SCRIPT_DIR/capture_broker.sh"

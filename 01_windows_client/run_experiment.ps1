@@ -18,7 +18,8 @@ param(
     [string]$ServerBUser = "server-b",
     [string]$ServerBProject = "~/mqtitit/03_ubuntu_server_b_attacker",
 
-    [int]$StartDelaySeconds = 5
+    [int]$StartDelaySeconds = 12,
+    [int]$AttackAuthDelaySeconds = 15
 )
 
 $ErrorActionPreference = "Stop"
@@ -91,7 +92,7 @@ $runDirectory = Join-Path (Join-Path $PSScriptRoot "experiments") $RunId
 $serverADirectory = Join-Path $runDirectory "server_a_broker"
 $serverBDirectory = Join-Path $runDirectory "server_b_attacker"
 
-$brokerCommand = "cd $serverAProjectRemote && sudo -v && ./scripts/run_broker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --iface $BrokerIface --duration $Duration --capture-duration $CaptureDuration"
+$brokerCommand = "cd $serverAProjectRemote && ./scripts/run_broker.sh --scenario $Scenario --run-id $RunId --broker-host $BrokerHost --iface $BrokerIface --duration $Duration --capture-duration $CaptureDuration"
 $clientCommand = @(
     "-ExecutionPolicy", "Bypass",
     "-File", ".\run_client.ps1",
@@ -129,7 +130,8 @@ Start-Sleep -Seconds $StartDelaySeconds
 
 if ($Scenario -ne "normal") {
     $attackerProcess = Start-SshCommand -Target $serverBTarget -Command $attackerCommand -Name "attacker"
-    Start-Sleep -Seconds 2
+    Write-Host "[INFO] Menunggu $AttackAuthDelaySeconds detik agar autentikasi attacker selesai sebelum client berjalan."
+    Start-Sleep -Seconds $AttackAuthDelaySeconds
 }
 
 Write-Host "[RUN] Windows client"
