@@ -30,6 +30,7 @@ function Import-ProjectConfig {
         MQTT_QOS = "1"
         MQTT_INTERVAL_MS = "1000"
         MQTT_TIMEOUT_SEC = "5"
+        ATTACK_RATE = "1000"
         OUTPUT_DIR = "experiments"
     }
     foreach ($entry in $defaults.GetEnumerator()) {

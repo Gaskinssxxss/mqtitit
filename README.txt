@@ -18,26 +18,28 @@ PEMBAGIAN SISTEM
 
 1. 01_windows_client
    Dijalankan pada Windows. Berfungsi sebagai simulasi perangkat IoT,
-   pencatat keberhasilan dan latency MQTT, serta tempat analisis akhir.
+   attacker SYN flood berbasis Nping, pencatat keberhasilan dan latency MQTT,
+   serta tempat analisis akhir.
 
 2. 02_ubuntu_server_a_broker
    Disalin ke Ubuntu Server A. Berisi Mosquitto test workflow, packet capture
    TShark, ekstraksi trafik, dan rate limiting nftables.
 
 3. 03_ubuntu_server_b_attacker
-   Disalin ke Ubuntu Server B. Menghasilkan SYN flood terkontrol dengan hping3.
+   Folder lama untuk mode dua Ubuntu Server. Pada arsitektur sederhana terbaru,
+   folder ini tidak perlu dipakai.
 
 ARAH TRAFIK
 -----------
 
-Windows client --------------------> Ubuntu Server A : port MQTT
-Ubuntu Server B attacker ----------> Ubuntu Server A : port MQTT
+Windows client MQTT ---------------> Ubuntu Server A : port MQTT
+Windows attacker SYN flood --------> Ubuntu Server A : port MQTT
 Ubuntu Server A -------------------> merekam seluruh trafik yang diterimanya
 
 KONFIGURASI BERSAMA
 -------------------
 
-Untuk satu pengujian, nilai berikut harus sama pada ketiga mesin:
+Untuk satu pengujian, nilai berikut harus sama pada Windows dan Ubuntu Server A:
 
 - RUN_ID
 - SCENARIO
@@ -61,10 +63,10 @@ run01_mitigation   + SCENARIO=syn_flood_rate_limit
 URUTAN MENJALANKAN SATU PENGUJIAN
 ---------------------------------
 
-1. Atur config.env pada ketiga mesin.
+1. Atur config.env pada Windows dan Ubuntu Server A.
 2. Jalankan run_broker.sh pada Ubuntu Server A terlebih dahulu.
-3. Segera jalankan run_client.ps1 pada Windows.
-4. Untuk skenario serangan, jalankan run_attacker.sh pada Ubuntu Server B.
+3. Untuk skenario serangan, jalankan run_attacker.ps1 pada Windows.
+4. Jalankan run_client.ps1 pada Windows.
 5. Tunggu durasi pengujian selesai.
 6. Jalankan finalize_broker.sh pada Ubuntu Server A.
 7. Salin metadata.env dan raw_flow.csv dari Server A ke folder RUN_ID Windows.
@@ -89,8 +91,8 @@ BACA DOKUMENTASI
 
 Mulai dari:
 
-1. docs/BLUEPRINT_PROJECT_MQTT_MUDAH_DIPAHAMI.docx
-2. docs/TUTORIAL_SETUP_DAN_PENGUJIAN_END_TO_END.txt
+1. docs/TUTORIAL_PENGGUNAAN_3_TERMINAL_POWERSHELL.txt
+2. docs/BLUEPRINT_PROJECT_MQTT_MUDAH_DIPAHAMI.docx
 
 Dokumen pendukung:
 

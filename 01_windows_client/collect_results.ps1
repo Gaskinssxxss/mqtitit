@@ -10,7 +10,8 @@ param(
     [string]$ServerBUser = "server-b",
     [string]$ServerBProject = "~/mqtitit/03_ubuntu_server_b_attacker",
 
-    [switch]$SkipServerB
+    [switch]$SkipServerB,
+    [switch]$IncludeServerB
 )
 
 $ErrorActionPreference = "Stop"
@@ -55,7 +56,11 @@ Write-Host "========================================"
 Write-Host "COLLECT HASIL EKSPERIMEN"
 Write-Host "Run ID   : $RunId"
 Write-Host "Server A : $serverATarget"
-Write-Host "Server B : $serverBTarget"
+if ($IncludeServerB) {
+    Write-Host "Server B : $serverBTarget"
+} else {
+    Write-Host "Server B : tidak digunakan"
+}
 Write-Host "Output   : $runDirectory"
 Write-Host "========================================"
 
@@ -68,9 +73,16 @@ Copy-RemoteFile -Target $serverATarget -RemotePath "$serverAProjectRemote/experi
 Copy-Item -Force (Join-Path $serverADirectory "metadata.env") (Join-Path $runDirectory "metadata.env")
 Copy-Item -Force (Join-Path $serverADirectory "raw_flow.csv") (Join-Path $runDirectory "raw_flow.csv")
 
-if (-not $SkipServerB) {
+if ($IncludeServerB -and -not $SkipServerB) {
     Write-Host "[COPY] Mengambil hasil Server B."
     Copy-RemoteFile -Target $serverBTarget -RemotePath "$serverBProjectRemote/experiments/$RunId/attack.log" -LocalDirectory $serverBDirectory
+}
+
+$localAttackLog = Join-Path $runDirectory "attack.log"
+if (Test-Path $localAttackLog) {
+    $windowsAttackDirectory = Join-Path $runDirectory "windows_attacker"
+    New-Item -ItemType Directory -Force -Path $windowsAttackDirectory | Out-Null
+    Copy-Item -Force $localAttackLog $windowsAttackDirectory
 }
 
 Write-Host "[OK] File mentah sudah dikumpulkan ke:"
@@ -80,6 +92,10 @@ Write-Host "     mqtt_client.csv"
 Write-Host "     metadata.env"
 Write-Host "     raw_flow.csv"
 Write-Host "     server_a_broker\capture.pcapng"
-if (-not $SkipServerB) {
+if (Test-Path $localAttackLog) {
+    Write-Host "     attack.log"
+    Write-Host "     windows_attacker\attack.log"
+}
+if ($IncludeServerB -and -not $SkipServerB) {
     Write-Host "     server_b_attacker\attack.log"
 }

@@ -1,17 +1,17 @@
 CARA RUNNING MUDAH TANPA EDIT CONFIG BERKALI-KALI
 =================================================
 
-Tujuan perubahan ini:
-- config.env cukup dipakai sebagai default awal.
-- Saat pengujian, tidak perlu bolak-balik ubah RUN_ID dan SCENARIO.
-- Setiap skenario dijalankan dengan parameter command.
-- Eksperimen tetap dijalankan dari tiga terminal agar lebih stabil.
-- Setelah selesai, Windows bisa menarik file mentah dari Server A dan B.
+Mode utama terbaru:
+- 1 Ubuntu Server sebagai broker MQTT.
+- Windows sebagai client MQTT dan attacker SYN flood.
+- Tidak memakai Ubuntu Server B.
 
-Contoh IP:
-- Ubuntu Server A / Broker   : 192.168.56.10
-- Ubuntu Server B / Attacker : 192.168.56.20
-- Windows Client             : 192.168.56.1
+
+CONTOH IP
+---------
+
+Ubuntu Server A / Broker : 192.168.56.10
+Windows                 : 192.168.56.1
 
 Kalau IP broker berbeda, ganti 192.168.56.10 pada command.
 
@@ -21,9 +21,14 @@ Kalau IP broker berbeda, ganti 192.168.56.10 pada command.
 
 Windows:
 
-cd mqtitit\01_windows_client
-Copy-Item config.env.example config.env
+cd D:\mqtitit\01_windows_client
 py -3 -m pip install -r requirements.txt
+
+Untuk menjalankan SYN flood dari Windows:
+
+1. Install Nmap for Windows.
+2. Install Npcap saat diminta oleh installer.
+3. Jalankan PowerShell sebagai Administrator.
 
 Ubuntu Server A:
 
@@ -35,18 +40,13 @@ ip -br address
 Catat nama interface yang punya IP broker.
 Contoh: enp0s8.
 
-Ubuntu Server B:
-
-cd ~/mqtitit/03_ubuntu_server_b_attacker
-cp config.env.example config.env
-chmod +x scripts/*.sh
-
 
 2. SKENARIO NORMAL
 ------------------
 
-Gunakan RUN_ID yang sama pada Windows dan Server A.
-Contoh: normal_01.
+RUN_ID contoh:
+
+normal_01
 
 Ubuntu Server A:
 
@@ -56,101 +56,73 @@ Windows:
 
 powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -Duration 60
 
-Ubuntu Server B tidak perlu menjalankan serangan untuk skenario normal.
+Setelah capture selesai, Ubuntu Server A:
 
+RUN_ID=normal_01 ./scripts/finalize_broker.sh
 
-2B. AMBIL HASIL DARI WINDOWS
-----------------------------
+Ambil hasil dari Windows:
 
-Syarat:
-- Windows sudah bisa SSH ke Ubuntu Server A.
-- Windows sudah bisa SSH ke Ubuntu Server B.
-- Project sudah dipull pada Windows, Server A, dan Server B.
-- Jika belum memakai SSH key, PowerShell akan meminta password SSH.
-- Setelah tiga terminal selesai, file hasil Server A dan Server B dicopy ke folder:
-  experiments\<RUN_ID>\ pada Windows.
-
-Dari Windows:
-
-cd mqtitit\01_windows_client
-
-Normal:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId normal_01 -ServerAUser server-a -SkipServerB
-
-SYN flood:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId attack_01 -ServerAUser server-a -ServerBUser server-b
-
-Rate limiting:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId mitigation_01 -ServerAUser server-a -ServerBUser server-b
-
-Kalau username Ubuntu berbeda, ubah -ServerAUser dan -ServerBUser.
-Kalau path project di Ubuntu berbeda, tambahkan:
-
--ServerAProject "~/mqtitit/02_ubuntu_server_a_broker"
--ServerBProject "~/mqtitit/03_ubuntu_server_b_attacker"
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId normal_01 -ServerAUser server-a
 
 
 3. SKENARIO SYN FLOOD
 ---------------------
 
-Gunakan RUN_ID yang sama pada ketiga mesin.
-Contoh: attack_01.
+RUN_ID contoh:
+
+attack_01
 
 Ubuntu Server A:
 
 ./scripts/run_broker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
 
-Windows:
+Windows attacker:
+
+powershell -ExecutionPolicy Bypass -File .\run_attacker.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60 -AttackRate 1000 -YesLocal -Background
+
+Windows client:
 
 powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60
 
-Ubuntu Server B:
+Setelah capture selesai, Ubuntu Server A:
 
-./scripts/run_attacker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
+RUN_ID=attack_01 ./scripts/finalize_broker.sh
+
+Ambil hasil dari Windows:
+
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId attack_01 -ServerAUser server-a
 
 
 4. SKENARIO RATE LIMITING
 -------------------------
 
-Gunakan RUN_ID yang sama pada ketiga mesin.
-Contoh: mitigation_01.
+RUN_ID contoh:
+
+mitigation_01
 
 Ubuntu Server A:
 
 ./scripts/run_broker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
 
-Windows:
+Windows attacker:
+
+powershell -ExecutionPolicy Bypass -File .\run_attacker.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60 -AttackRate 1000 -YesLocal -Background
+
+Windows client:
 
 powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60
 
-Ubuntu Server B:
+Setelah capture selesai, Ubuntu Server A:
 
-./scripts/run_attacker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --duration 60 --attack-rate 1000 --yes-local
+RUN_ID=mitigation_01 ./scripts/finalize_broker.sh
 
+Ambil hasil dari Windows:
 
-5. URUTAN JALAN YANG BENAR
---------------------------
-
-Untuk setiap skenario:
-
-1. Jalankan Server A dulu.
-2. Jalankan Windows client.
-3. Jalankan Server B attacker khusus skenario serangan.
-4. Tunggu semua selesai.
-5. Di Server A jalankan:
-
-./scripts/finalize_broker.sh
-
-6. Di Windows jalankan collect_results.ps1 sesuai RUN_ID.
+powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId mitigation_01 -ServerAUser server-a
 
 
-6. FILE HASIL YANG DIAMBIL
---------------------------
-
-Jika memakai collect_results.ps1 dari Windows, file hasil otomatis terkumpul.
+5. FILE HASIL
+-------------
 
 Lokasi utama:
 
@@ -165,18 +137,18 @@ experiments/<RUN_ID>/server_a_broker/capture.log
 experiments/<RUN_ID>/server_a_broker/raw_flow.csv
 experiments/<RUN_ID>/server_a_broker/metadata.env
 
-Backup hasil Server B:
+Khusus skenario serangan:
 
-experiments/<RUN_ID>/server_b_attacker/attack.log
+experiments/<RUN_ID>/attack.log
+experiments/<RUN_ID>/windows_attacker/attack.log
 
-Kalau menjalankan tiga terminal manual, file dari Server A dan Server B tetap
-perlu disalin sendiri.
 
-7. CATATAN PENTING
+6. CATATAN PENTING
 ------------------
 
-- RUN_ID harus sama dalam satu skenario.
-- SCENARIO harus sama dalam satu skenario.
-- Jangan menyerang IP selain Ubuntu Server A.
-- --yes-local hanya untuk testbed sendiri yang memang diizinkan.
+- RUN_ID harus sama antara Windows dan Ubuntu Server A.
+- Jangan menyerang IP selain broker uji sendiri.
+- -YesLocal hanya untuk testbed sendiri yang memang diizinkan.
 - Kalau nama interface bukan enp0s8, ganti --iface sesuai hasil ip -br address.
+- Jika raw_flow.csv belum ada, jalankan finalize_broker.sh lagi dengan RUN_ID
+  yang benar.

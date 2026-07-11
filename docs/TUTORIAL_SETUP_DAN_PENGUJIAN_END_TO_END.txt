@@ -1,3 +1,18 @@
+CATATAN PENTING
+===============
+
+Dokumen ini adalah tutorial lama untuk mode dua Ubuntu Server.
+Untuk setup terbaru yang lebih sederhana, gunakan:
+
+docs/TUTORIAL_PENGGUNAAN_3_TERMINAL_POWERSHELL.txt
+
+Mode terbaru hanya memakai:
+- Windows sebagai client MQTT dan attacker SYN flood.
+- Ubuntu Server A sebagai broker, capture, ekstraksi data, dan rate limiting.
+
+Ubuntu Server B tidak dipakai pada mode terbaru.
+
+
 TUTORIAL RINGKAS SETUP DAN PENGUJIAN
 =====================================
 
@@ -213,7 +228,7 @@ Untuk setiap pengujian:
 
 5. Tunggu proses selesai, kemudian jalankan pada Server A:
 
-   ./scripts/finalize_broker.sh
+   ./scripts/finalize_broker.sh --run-id <RUN_ID>
 
 Pada normal, Server B tidak mengirim serangan.
 Pada syn_flood, rate limiting tidak aktif.

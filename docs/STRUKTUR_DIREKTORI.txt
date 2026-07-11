@@ -1,7 +1,27 @@
-STRUKTUR DIREKTORI TIGA MESIN
-==============================
+STRUKTUR DIREKTORI PROJECT TERBARU
+==================================
 
-Project dipisahkan berdasarkan mesin tempat program dijalankan:
+Project sekarang memakai arsitektur sederhana:
+
+1. Windows
+   - client MQTT normal;
+   - attacker SYN flood menggunakan Nping;
+   - pengumpul hasil eksperimen;
+   - analisis hasil.
+
+2. Ubuntu Server A
+   - broker MQTT Mosquitto;
+   - packet capture;
+   - ekstraksi capture menjadi raw_flow.csv;
+   - rate limiting.
+
+Ubuntu Server B tidak dibutuhkan lagi untuk mode utama. Folder
+03_ubuntu_server_b_attacker tetap disimpan sebagai legacy jika suatu saat ingin
+kembali ke mode dua Ubuntu Server.
+
+
+STRUKTUR FOLDER
+---------------
 
 .
 ├── 01_windows_client/
@@ -9,6 +29,8 @@ Project dipisahkan berdasarkan mesin tempat program dijalankan:
 │   ├── requirements.txt
 │   ├── doctor.ps1
 │   ├── run_client.ps1
+│   ├── run_attacker.ps1
+│   ├── collect_results.ps1
 │   ├── analyze_run.ps1
 │   ├── analyze_all.ps1
 │   └── src/
@@ -28,38 +50,50 @@ Project dipisahkan berdasarkan mesin tempat program dijalankan:
 │       └── common.sh
 │
 ├── 03_ubuntu_server_b_attacker/
-│   ├── config.env.example
-│   └── scripts/
-│       ├── doctor.sh
-│       ├── run_attacker.sh
-│       ├── attack_syn_flood.sh
-│       └── common.sh
+│   └── legacy mode dua Ubuntu Server
 │
 └── docs/
+
 
 01_windows_client
 -----------------
 
-Folder ini hanya untuk Windows. Tidak membutuhkan WSL. Program PowerShell
-menjalankan client Python dan proses analisis. Hasil akhir seluruh mesin
-dikumpulkan di folder experiments pada bagian ini.
+Folder ini dijalankan pada Windows. Tidak membutuhkan WSL.
+
+Perannya:
+- mengirim pesan MQTT normal ke broker;
+- menjalankan SYN flood dari Windows menggunakan Nping;
+- mengambil file hasil dari Ubuntu Server A;
+- menyimpan semua hasil dalam experiments/<RUN_ID>/;
+- menjalankan analisis.
+
 
 02_ubuntu_server_a_broker
 -------------------------
 
-Folder ini hanya untuk VirtualBox A. Broker Mosquitto berjalan pada mesin ini.
-TShark merekam paket pada interface jaringan Ubuntu Server A dan nftables
-menjalankan rate limiting pada skenario mitigasi.
+Folder ini dijalankan pada Ubuntu Server A.
+
+Perannya:
+- menjalankan broker MQTT Mosquitto;
+- melakukan packet capture langsung pada interface broker;
+- membuat raw_flow.csv dari capture.pcapng;
+- menerapkan rate limiting pada skenario mitigasi.
+
 
 03_ubuntu_server_b_attacker
 ---------------------------
 
-Folder ini hanya untuk VirtualBox B. Hping3 menghasilkan SYN flood menuju IP
-Ubuntu Server A. Folder ini tidak dibutuhkan oleh Windows atau broker.
+Folder ini adalah folder legacy. Pada konsep terbaru, folder ini tidak perlu
+dicopy atau dijalankan di laptop teman.
 
-Mengapa kode dipisahkan?
-------------------------
 
-Setiap mesin hanya melihat program yang menjadi tanggung jawabnya. Dengan
-demikian, pengguna tidak perlu memilih role broker/client/attacker dari satu
-script campuran dan risiko menjalankan program pada mesin yang salah berkurang.
+KENAPA LEBIH SEDERHANA?
+-----------------------
+
+Karena hanya ada dua lingkungan yang harus dipahami:
+
+1. Windows sebagai perangkat penguji.
+2. Ubuntu Server A sebagai server broker yang diamati.
+
+Dengan begitu, pengujian tetap valid karena serangan masih berasal dari luar
+server broker, tetapi setup tidak lagi membutuhkan dua VM Ubuntu.
