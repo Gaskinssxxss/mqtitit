@@ -1,99 +1,74 @@
-STRUKTUR DIREKTORI PROJECT TERBARU
-==================================
+STRUKTUR DIREKTORI KONSEP LAMA
+==============================
 
-Project sekarang memakai arsitektur sederhana:
+Project utama sekarang memakai konsep sniffer dan prober.
 
-1. Windows
-   - client MQTT normal;
-   - attacker SYN flood menggunakan Nping;
-   - pengumpul hasil eksperimen;
-   - analisis hasil.
-
-2. Ubuntu Server A
-   - broker MQTT Mosquitto;
-   - packet capture;
-   - ekstraksi capture menjadi raw_flow.csv;
-   - rate limiting.
-
-Ubuntu Server B tidak dibutuhkan lagi untuk mode utama. Folder
-03_ubuntu_server_b_attacker tetap disimpan sebagai legacy jika suatu saat ingin
-kembali ke mode dua Ubuntu Server.
-
-
-STRUKTUR FOLDER
----------------
+Struktur utama:
 
 .
-├── 01_windows_client/
-│   ├── config.env.example
-│   ├── requirements.txt
-│   ├── doctor.ps1
-│   ├── run_client.ps1
-│   ├── run_attacker.ps1
-│   ├── collect_results.ps1
-│   ├── analyze_run.ps1
-│   ├── analyze_all.ps1
-│   └── src/
-│       ├── mqtt_test_client.py
-│       ├── analyze_single_run.py
-│       └── analyze_all_runs.py
-│
-├── 02_ubuntu_server_a_broker/
-│   ├── config.env.example
-│   └── scripts/
-│       ├── doctor.sh
-│       ├── run_broker.sh
-│       ├── capture_broker.sh
-│       ├── rate_limit.sh
-│       ├── finalize_broker.sh
-│       ├── extract_raw_flow.sh
-│       └── common.sh
-│
-├── 03_ubuntu_server_b_attacker/
-│   └── legacy mode dua Ubuntu Server
-│
-└── docs/
+├── lab_env.sh
+├── run_all.sh
+├── run_all_cli.sh
+├── sniffer_capture.sh
+├── mqtt_prober.sh
+├── extract_raw_flow.sh
+├── compile.py
+├── requirements.txt
+├── docs/
+└── tmp/
 
 
-01_windows_client
------------------
+PENJELASAN FILE
+---------------
 
-Folder ini dijalankan pada Windows. Tidak membutuhkan WSL.
+1. lab_env.sh
 
-Perannya:
-- mengirim pesan MQTT normal ke broker;
-- menjalankan SYN flood dari Windows menggunakan Nping;
-- mengambil file hasil dari Ubuntu Server A;
-- menyimpan semua hasil dalam experiments/<RUN_ID>/;
-- menjalankan analisis.
+   File konfigurasi utama. Isinya:
+
+   - TARGET_IP: alamat IP broker MQTT.
+   - MQTT_PORTS: port MQTT yang diamati, misalnya 1883.
+   - NET_IFACE: interface jaringan pada PC A.
+   - LOG_DIR: folder log prober.
+   - PCAP_DIR: folder hasil capture.
+
+2. run_all.sh
+
+   Script orkestrasi. Script ini menjalankan:
+
+   - sniffer_capture.sh
+   - mqtt_prober.sh
+
+   Keduanya berjalan bersamaan sampai user menekan CTRL+C.
+
+3. run_all_cli.sh
+
+   Versi interaktif dari run_all.sh. User dapat mengisi IP broker, interface,
+   dan port MQTT sebelum eksperimen dimulai.
+
+4. sniffer_capture.sh
+
+   Script untuk capture paket jaringan menggunakan tshark. Output-nya adalah
+   file pcapng di folder pcap/.
+
+5. mqtt_prober.sh
+
+   Script untuk mengirim pesan MQTT normal ke broker menggunakan mosquitto_pub.
+   Output-nya adalah CSV log di folder logs/.
+
+6. extract_raw_flow.sh
+
+   Script untuk mengubah file pcapng menjadi CSV raw flow.
+
+7. compile.py
+
+   Script Python untuk menghitung metrik trafik dari raw_flow.csv.
 
 
-02_ubuntu_server_a_broker
--------------------------
+FOLDER TMP
+----------
 
-Folder ini dijalankan pada Ubuntu Server A.
+Konsep baru yang memakai Windows + Ubuntu Server A disimpan secara lokal di:
 
-Perannya:
-- menjalankan broker MQTT Mosquitto;
-- melakukan packet capture langsung pada interface broker;
-- membuat raw_flow.csv dari capture.pcapng;
-- menerapkan rate limiting pada skenario mitigasi.
+tmp/current_concept_1_ubuntu_windows/
 
-
-03_ubuntu_server_b_attacker
----------------------------
-
-Folder ini adalah folder legacy. Pada konsep terbaru, folder ini tidak perlu
-dicopy atau dijalankan di laptop teman.
-
-
-KENAPA LEBIH SEDERHANA?
------------------------
-
-Karena hanya ada dua lingkungan yang harus dipahami:
-
-1. Windows sebagai perangkat penguji.
-2. Ubuntu Server A sebagai server broker yang diamati.
-
-Dengan begitu, pengujian tetap valid karena serangan masih berasal dari luar
-server broker, tetapi setup tidak lagi membutuhkan dua VM Ubuntu.
+Folder tmp di-ignore oleh git, jadi tidak ikut masuk repository.

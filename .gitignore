@@ -1,36 +1,60 @@
-.venv/
+# Python cache and virtual environments
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
 
 # Local/editor files
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Local configuration. Keep config.env.example tracked.
-config.env
+# Local configuration and secrets
 .env
+config.env
 *.local
 *.secret
+*.key
+*.pem
 
-# Generated experiment outputs
-experiments/
-pcap/
+# Experiment outputs
 logs/
+pcap/
 raw/
 metrics/
 metrics_smoke/
+experiments/
 test/
-tmp/
+
+# Packet capture and generated analysis files
 *.pcap
 *.pcapng
 *_raw_flow.csv
+metrics.csv
+mqtt_dos_metrics.csv
 
-# Legacy/proposal files that should not be pushed with the new project
-legacy_old_project/
-tools/
+# Temporary/local archive
+tmp/
+
+# Local thesis/draft outputs
+output/
+docs/skripsi_draft/
+docs/skripsi_knowledge/
+
+# Large proposal/thesis source files kept locally
 *.pdf
 *.docx
-!docs/BLUEPRINT_PROJECT_MQTT_MUDAH_DIPAHAMI.docx
+
+# Legacy source copy kept only as local backup.
+# Runtime legacy scripts are now copied to repository root and should be tracked.
+legacy_old_project/
+
+# Tooling used only for local document generation
+tools/

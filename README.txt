@@ -1,110 +1,124 @@
-MQTT DOS RATE LIMITING TESTBED
-==============================
+MQTT DOS LEGACY TESTBED - SNIFFER DAN PROBER
+============================================
 
-Project ini menguji dampak SYN flood terhadap broker MQTT dan mengukur
-efektivitas rate limiting. Packet capture dilakukan langsung pada server
-broker agar trafik yang dianalisis benar-benar merupakan trafik yang diterima
-broker.
+Project ini dikembalikan ke konsep awal penelitian:
 
-Status penggunaan saat ini:
+- PC A menjalankan sniffer dan prober.
+- Broker MQTT menjadi target pengujian.
+- Attacker berada pada mesin lain dan mengirim serangan ke broker saat skenario
+  DoS dijalankan.
 
-- mode utama: local;
-- jaringan: VirtualBox Host-Only;
-- port MQTT testbed: 1883;
-- target pengujian: Ubuntu Server A milik sendiri.
+Konsep ini sesuai dengan folder legacy lama yang berisi:
 
-PEMBAGIAN SISTEM
-----------------
+- sniffer_capture.sh
+- mqtt_prober.sh
+- run_all.sh
+- run_all_cli.sh
+- extract_raw_flow.sh
+- compile.py
+- lab_env.sh
 
-1. 01_windows_client
-   Dijalankan pada Windows. Berfungsi sebagai simulasi perangkat IoT,
-   attacker SYN flood berbasis Nping, pencatat keberhasilan dan latency MQTT,
-   serta tempat analisis akhir.
 
-2. 02_ubuntu_server_a_broker
-   Disalin ke Ubuntu Server A. Berisi Mosquitto test workflow, packet capture
-   TShark, ekstraksi trafik, dan rate limiting nftables.
+ARSITEKTUR KONSEP LAMA
+----------------------
 
-3. 03_ubuntu_server_b_attacker
-   Folder lama untuk mode dua Ubuntu Server. Pada arsitektur sederhana terbaru,
-   folder ini tidak perlu dipakai.
+PC A / host monitoring
+├── sniffer_capture.sh
+│   └── capture trafik MQTT menggunakan tshark
+│
+├── mqtt_prober.sh
+│   └── mengirim trafik MQTT normal menggunakan mosquitto_pub
+│
+└── run_all.sh
+    └── menjalankan sniffer dan prober bersamaan
+
+Broker MQTT
+└── target layanan MQTT
+
+Attacker
+└── mesin lain yang mengirim trafik DoS/SYN flood ke broker
+
 
 ARAH TRAFIK
 -----------
 
-Windows client MQTT ---------------> Ubuntu Server A : port MQTT
-Windows attacker SYN flood --------> Ubuntu Server A : port MQTT
-Ubuntu Server A -------------------> merekam seluruh trafik yang diterimanya
+PC A prober  ----------------------> Broker MQTT
+PC A sniffer ----------------------> capture trafik yang terlihat pada interface PC A
+Attacker   ------------------------> Broker MQTT
 
-KONFIGURASI BERSAMA
--------------------
 
-Untuk satu pengujian, nilai berikut harus sama pada Windows dan Ubuntu Server A:
+CATATAN VALIDITAS
+-----------------
 
-- RUN_ID
-- SCENARIO
-- EXPERIMENT_DURATION
-- DEPLOYMENT_MODE
-- BROKER_HOST
-- MQTT_PORT
+Pada konsep ini, capture dilakukan pada PC A / host monitoring, bukan langsung
+pada broker. Artinya, data serangan hanya akan terlihat lengkap jika trafik
+attacker ke broker memang melewati interface yang dicapture oleh PC A.
 
-SCENARIO yang valid:
+Jika trafik attacker langsung menuju broker tanpa melewati PC A, maka sniffer
+di PC A bisa tidak melihat trafik serangan secara lengkap.
 
-- normal
-- syn_flood
-- syn_flood_rate_limit
 
-Contoh tiga pengujian:
+FILE UTAMA
+----------
 
-run01_normal       + SCENARIO=normal
-run01_attack       + SCENARIO=syn_flood
-run01_mitigation   + SCENARIO=syn_flood_rate_limit
+lab_env.sh
+    Konfigurasi IP broker, port MQTT, interface capture, folder log, dan folder
+    pcap.
 
-URUTAN MENJALANKAN SATU PENGUJIAN
----------------------------------
+run_all.sh
+    Menjalankan sniffer_capture.sh dan mqtt_prober.sh bersamaan.
 
-1. Atur config.env pada Windows dan Ubuntu Server A.
-2. Jalankan run_broker.sh pada Ubuntu Server A terlebih dahulu.
-3. Untuk skenario serangan, jalankan run_attacker.ps1 pada Windows.
-4. Jalankan run_client.ps1 pada Windows.
-5. Tunggu durasi pengujian selesai.
-6. Jalankan finalize_broker.sh pada Ubuntu Server A.
-7. Salin metadata.env dan raw_flow.csv dari Server A ke folder RUN_ID Windows.
-8. Jalankan analyze_run.ps1 pada Windows.
+run_all_cli.sh
+    Versi interaktif untuk memilih IP broker, interface, dan port MQTT.
 
-Setelah tersedia beberapa pengulangan setiap skenario, jalankan
-analyze_all.ps1 pada Windows.
+sniffer_capture.sh
+    Menangkap trafik MQTT menggunakan tshark dan menyimpan capture ke folder
+    pcap/.
 
-OUTPUT YANG DIGABUNGKAN DI WINDOWS
-----------------------------------
+mqtt_prober.sh
+    Mengirim pesan MQTT berkala ke broker menggunakan mosquitto_pub dan
+    menyimpan log ke folder logs/.
 
-01_windows_client\experiments\<RUN_ID>\
-    mqtt_client.csv       dibuat oleh Windows
-    metadata.env          disalin dari Ubuntu Server A
-    raw_flow.csv          disalin dari Ubuntu Server A
-    metrics.json          dibuat oleh analyze_run.ps1
-    metrics.csv           dibuat oleh analyze_run.ps1
-    timeseries_metrics.csv
+extract_raw_flow.sh
+    Mengekstrak file pcap/pcapng menjadi CSV raw flow.
 
-BACA DOKUMENTASI
-----------------
+compile.py
+    Menghitung metrik trafik dari CSV raw flow.
 
-Mulai dari:
 
-1. docs/TUTORIAL_PENGGUNAAN_3_TERMINAL_POWERSHELL.txt
-2. docs/BLUEPRINT_PROJECT_MQTT_MUDAH_DIPAHAMI.docx
+DEPENDENCY
+----------
 
-Dokumen pendukung:
+Pada PC A:
 
-- Setiap direktori mesin memiliki README.txt sendiri.
-- docs/STRUKTUR_DIREKTORI.txt menjelaskan pembagian file.
-- docs/CARA_MENJALANKAN_PROJECT.txt menjelaskan urutan operasi.
-- docs/BLUEPRINT_PROJECT_BARU.txt menjelaskan konsep penelitian.
-- SECURITY.txt menjelaskan batas penggunaan yang diizinkan.
+sudo apt update
+sudo apt install -y tshark mosquitto-clients python3 python3-pip
+python3 -m pip install -r requirements.txt
 
-BATAS KEAMANAN
---------------
 
-SYN flood hanya boleh dijalankan pada testbed milik sendiri atau jaringan yang
-memberikan izin tertulis. Mode campus dan public tidak berarti serangan boleh
-dijalankan tanpa persetujuan pengelola jaringan dan server.
+CARA CEPAT MENJALANKAN
+----------------------
+
+1. Edit konfigurasi di lab_env.sh jika diperlukan.
+
+2. Jalankan mode interaktif:
+
+   ./run_all_cli.sh
+
+3. Saat eksperimen selesai, tekan CTRL+C.
+
+4. Script akan mencari file pcap terbaru dan menjalankan extract_raw_flow.sh.
+
+5. Jalankan compile.py pada file raw_flow.csv:
+
+   python3 compile.py pcap/NAMA_FILE_raw_flow.csv -o metrics.csv --ports 1883
+
+
+FOLDER KONSEP BARU
+------------------
+
+Konsep baru yang memakai Windows + Ubuntu Server A sudah dipindahkan ke:
+
+tmp/current_concept_1_ubuntu_windows/
+
+Folder tmp tidak ikut dipush ke GitHub karena memang hanya arsip lokal.

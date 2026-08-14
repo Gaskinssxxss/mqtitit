@@ -1,271 +1,136 @@
-TUTORIAL PENGGUNAAN PROJECT DENGAN 1 UBUNTU SERVER + WINDOWS
-============================================================
+TUTORIAL KONSEP LAMA: SNIFFER + PROBER
+======================================
 
-Tujuan tutorial ini:
-- Menjalankan pengujian dari laptop Windows.
-- Ubuntu Server A dipakai sebagai broker MQTT, packet capture, ekstraksi data,
-  dan rate limiting.
-- Windows dipakai sebagai client MQTT, attacker SYN flood, dan tempat
-  mengumpulkan hasil.
+Dokumen ini menggantikan tutorial 3 terminal/1 Ubuntu Server.
 
-Dengan konsep ini, Ubuntu Server B tidak dipakai lagi.
+Konsep yang dipakai sekarang:
 
+PC A:
+- sniffer;
+- prober;
+- ekstraksi data;
+- analisis metrik.
 
-CONTOH ALAMAT
--------------
+Broker MQTT:
+- target layanan MQTT.
 
-Ubuntu Server A / Broker : 192.168.56.10
-Windows                 : 192.168.56.1
-Port MQTT               : 1883
-Interface broker        : enp0s8
-
-Kalau IP atau interface berbeda, sesuaikan command.
+Attacker:
+- mesin lain yang mengirim trafik serangan pada skenario DoS.
 
 
-1. BUKA VIRTUALBOX
-------------------
+1. SIAPKAN PC A
+---------------
 
-1. Buka VirtualBox.
-2. Jalankan VM Ubuntu Server A.
-3. Tidak perlu menjalankan Ubuntu Server B.
-4. Pastikan Ubuntu Server A sudah bisa di-SSH dari Windows.
+Install dependency:
 
-Login Ubuntu Server A jika diperlukan:
+sudo apt update
+sudo apt install -y tshark mosquitto-clients python3 python3-pip
+python3 -m pip install -r requirements.txt
 
-username: server-a
-password: isi password Ubuntu Server A
+Pastikan script bisa dijalankan:
 
-
-2. BUKA 2 POWERSHELL DI WINDOWS
--------------------------------
-
-Buka 2 jendela PowerShell.
-
-PowerShell 1:
-Windows client, Windows attacker, dan collect hasil.
-
-PowerShell 2:
-SSH ke Ubuntu Server A.
-
-Untuk PowerShell 1, lebih aman klik kanan PowerShell lalu pilih
-"Run as administrator", karena Nping/Npcap biasanya butuh hak administrator.
+chmod +x *.sh
 
 
-3. PERSIAPAN POWERSHELL 1 - WINDOWS
+2. TENTUKAN IP BROKER DAN INTERFACE
 -----------------------------------
 
-Di PowerShell 1, ketik command berikut untuk masuk ke folder Windows:
-
-cd D:\mqtitit\01_windows_client
-
-Kalau baru pull update:
-
-git pull origin main
-
-Install dependency Python jika belum pernah:
-
-py -3 -m pip install -r requirements.txt
-
-Install tool attacker Windows:
-
-1. Install Nmap for Windows.
-2. Saat instalasi, aktifkan/install Npcap.
-3. Setelah selesai, tutup PowerShell lalu buka lagi sebagai Administrator.
-
-Cek kesiapan Windows:
-
-powershell -ExecutionPolicy Bypass -File .\doctor.ps1
-
-Doctor harus menunjukkan:
-- Python tersedia.
-- Broker dapat diakses jika broker sudah hidup.
-- Nping tersedia jika Windows akan dipakai sebagai attacker.
-
-
-4. PERSIAPAN POWERSHELL 2 - UBUNTU SERVER A
--------------------------------------------
-
-Di PowerShell 2, ketik command berikut untuk SSH ke Ubuntu Server A:
-
-ssh server-a@192.168.56.10
-
-Masukkan password Ubuntu Server A.
-
-Setelah berhasil login, ketik command berikut:
-
-cd ~/mqtitit
-git pull origin main
-cd 02_ubuntu_server_a_broker
-chmod +x scripts/*.sh
-
-Cek tool Server A:
-
-./scripts/doctor.sh
-
-Pastikan Mosquitto aktif:
-
-sudo systemctl status mosquitto
-
-Kalau belum aktif:
-
-sudo systemctl enable --now mosquitto
-
-Cek interface jaringan:
+Cek interface PC A:
 
 ip -br address
 
-Cari interface yang memiliki IP broker, misalnya 192.168.56.10.
-Contoh interface yang sering muncul:
+Tentukan:
 
-enp0s8
+- IP broker MQTT;
+- interface yang akan dicapture;
+- port MQTT.
+
+Contoh:
+
+IP broker: 192.168.100.50
+Interface: eth0
+Port MQTT: 1883
 
 
-5. SKENARIO NORMAL
+3. JALANKAN EKSPERIMEN
+----------------------
+
+Gunakan mode interaktif:
+
+./run_all_cli.sh
+
+Isi nilai yang diminta:
+
+- TARGET_IP;
+- NET_IFACE;
+- MQTT_PORTS.
+
+Setelah dikonfirmasi, sniffer dan prober akan berjalan.
+
+
+4. SKENARIO NORMAL
 ------------------
 
-RUN_ID contoh:
+Untuk normal:
 
-normal_01
-
-PowerShell 2 / Ubuntu Server A:
-
-./scripts/run_broker.sh --scenario normal --run-id normal_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
-
-Setelah capture Server A berjalan, pindah ke PowerShell 1 / Windows:
-
-powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -Duration 60
-
-Tunggu sampai client Windows selesai dan capture Server A selesai.
-
-Setelah capture selesai, di PowerShell 2 / Ubuntu Server A jalankan:
-
-RUN_ID=normal_01 ./scripts/finalize_broker.sh
-
-Kalau muncul masalah permission pada capture.pcapng, jalankan:
-
-sudo chown -R server-a:server-a experiments/normal_01
-chmod 644 experiments/normal_01/capture.pcapng
-RUN_ID=normal_01 ./scripts/finalize_broker.sh
-
-Lalu ambil hasil dari PowerShell 1 / Windows:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId normal_01 -ServerAUser server-a
+1. Jalankan broker MQTT.
+2. Jalankan ./run_all_cli.sh di PC A.
+3. Jangan jalankan attacker.
+4. Tunggu sesuai durasi pengamatan.
+5. Tekan CTRL+C.
 
 
-6. SKENARIO SYN FLOOD
+5. SKENARIO DOS
+---------------
+
+Untuk DoS:
+
+1. Jalankan broker MQTT.
+2. Jalankan ./run_all_cli.sh di PC A.
+3. Jalankan serangan dari mesin attacker menuju broker.
+4. Prober tetap mengirim trafik MQTT normal.
+5. Tekan CTRL+C setelah durasi pengamatan selesai.
+
+
+6. SKENARIO DOS + RATE LIMITING
+-------------------------------
+
+Untuk DoS + rate limiting:
+
+1. Aktifkan rate limiting pada sisi broker/perangkat mitigasi.
+2. Jalankan ./run_all_cli.sh di PC A.
+3. Jalankan serangan dari mesin attacker menuju broker.
+4. Tekan CTRL+C setelah durasi pengamatan selesai.
+
+
+7. SETELAH EKSPERIMEN
 ---------------------
 
-RUN_ID contoh:
+Setelah CTRL+C, run_all.sh akan otomatis mencoba membuat raw_flow.csv.
 
-attack_01
+Jika perlu ekstrak manual:
 
-PowerShell 2 / Ubuntu Server A:
+./extract_raw_flow.sh pcap/NAMA_FILE.pcapng
 
-./scripts/run_broker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+Hitung metrik:
 
-Setelah capture Server A berjalan, pindah ke PowerShell 1 / Windows dan jalankan attacker:
-
-powershell -ExecutionPolicy Bypass -File .\run_attacker.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60 -AttackRate 1000 -YesLocal -Background
-
-Setelah attacker berjalan di background, langsung jalankan client:
-
-powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60
-
-Tunggu sampai:
-- attacker Windows selesai,
-- client Windows selesai,
-- capture Server A selesai.
-
-Setelah capture selesai, di PowerShell 2 / Ubuntu Server A jalankan:
-
-RUN_ID=attack_01 ./scripts/finalize_broker.sh
-
-Lalu ambil hasil dari PowerShell 1 / Windows:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId attack_01 -ServerAUser server-a
+python3 compile.py pcap/NAMA_FILE_raw_flow.csv -o metrics.csv --ports 1883
 
 
-7. SKENARIO SYN FLOOD DENGAN RATE LIMITING
-------------------------------------------
+8. OUTPUT
+---------
 
-RUN_ID contoh:
+File utama:
 
-mitigation_01
-
-PowerShell 2 / Ubuntu Server A:
-
-./scripts/run_broker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
-
-Pada skenario ini, Server A akan meminta password sudo karena rate limiting aktif.
-
-Setelah capture Server A berjalan, pindah ke PowerShell 1 / Windows dan jalankan attacker:
-
-powershell -ExecutionPolicy Bypass -File .\run_attacker.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60 -AttackRate 1000 -YesLocal -Background
-
-Setelah attacker berjalan di background, langsung jalankan client:
-
-powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60
-
-Tunggu sampai semua selesai.
-
-Setelah capture selesai, di PowerShell 2 / Ubuntu Server A jalankan:
-
-RUN_ID=mitigation_01 ./scripts/finalize_broker.sh
-
-Lalu ambil hasil dari PowerShell 1 / Windows:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId mitigation_01 -ServerAUser server-a
+logs/mqtt_1883_probe_log.csv
+pcap/mqtt_traffic_<timestamp>.pcapng
+pcap/mqtt_traffic_<timestamp>_raw_flow.csv
+metrics.csv
 
 
-8. LOKASI HASIL DI WINDOWS
---------------------------
+9. CATATAN VALIDITAS
+--------------------
 
-Semua hasil akan terkumpul di:
-
-D:\mqtitit\01_windows_client\experiments\<RUN_ID>\
-
-Isi penting:
-
-mqtt_client.csv
-metadata.env
-raw_flow.csv
-server_a_broker\capture.pcapng
-server_a_broker\capture.log
-server_a_broker\metadata.env
-server_a_broker\raw_flow.csv
-
-Untuk skenario serangan, ada tambahan:
-
-attack.log
-windows_attacker\attack.log
-
-
-9. CATATAN PENTING
-------------------
-
-- RUN_ID harus sama antara Windows dan Ubuntu Server A.
-- Jangan pakai RUN_ID yang sama untuk pengujian baru.
-- Untuk skenario normal, tidak perlu menjalankan run_attacker.ps1.
-- Untuk skenario serangan, Windows berperan sebagai client MQTT dan attacker.
-- Serangan hanya boleh diarahkan ke broker uji sendiri atau sistem yang sudah
-  mendapat izin.
-- Jika raw_flow.csv belum ada, berarti finalize_broker.sh belum berhasil.
-- Jika Nping tidak ditemukan, install Nmap dan Npcap di Windows.
-
-
-10. RUN_ID YANG DISARANKAN
---------------------------
-
-Pengujian pertama:
-
-normal_01
-attack_01
-mitigation_01
-
-Pengujian kedua:
-
-normal_02
-attack_02
-mitigation_02
-
-Kalau pengujian gagal, jangan timpa data lama. Buat RUN_ID baru.
+Pada konsep lama, capture tidak dilakukan langsung pada broker. Capture
+dilakukan pada PC A. Karena itu, hasil capture hanya valid untuk trafik yang
+memang terlihat pada interface PC A.

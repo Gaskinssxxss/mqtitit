@@ -1,145 +1,146 @@
-CARA MENJALANKAN PROJECT
-========================
+CARA MENJALANKAN PROJECT KONSEP LAMA
+====================================
 
-Mode utama terbaru memakai:
+Konsep lama menggunakan PC A sebagai host monitoring.
 
-1. Windows
-   - menjalankan client MQTT normal;
-   - menjalankan attacker SYN flood menggunakan Nping;
-   - mengambil hasil eksperimen;
-   - menjalankan analisis.
+PC A menjalankan:
 
-2. Ubuntu Server A
-   - menjalankan broker MQTT;
-   - melakukan packet capture;
-   - membuat raw_flow.csv;
-   - menjalankan rate limiting.
+- sniffer_capture.sh untuk capture trafik MQTT;
+- mqtt_prober.sh untuk membuat trafik MQTT normal;
+- run_all.sh untuk menjalankan sniffer dan prober bersamaan.
 
-Ubuntu Server B tidak dipakai pada mode utama ini.
+Broker MQTT berada pada server target.
+Attacker berada pada mesin lain dan hanya dijalankan pada skenario DoS.
 
 
-PERSIAPAN WINDOWS
------------------
+1. INSTALL DEPENDENCY DI PC A
+-----------------------------
 
-Ketik command berikut untuk masuk ke folder Windows:
-
-cd D:\mqtitit\01_windows_client
-
-Install dependency Python:
-
-py -3 -m pip install -r requirements.txt
-
-Install Nmap dan Npcap jika Windows akan dipakai sebagai attacker SYN flood.
-Setelah instalasi, buka PowerShell sebagai Administrator.
-
-Cek Windows:
-
-powershell -ExecutionPolicy Bypass -File .\doctor.ps1
+sudo apt update
+sudo apt install -y tshark mosquitto-clients python3 python3-pip
+python3 -m pip install -r requirements.txt
 
 
-PERSIAPAN UBUNTU SERVER A
--------------------------
-
-Ketik command berikut setelah SSH ke Ubuntu Server A:
-
-cd ~/mqtitit/02_ubuntu_server_a_broker
-chmod +x scripts/*.sh
-./scripts/doctor.sh
-
-Pastikan Mosquitto aktif:
-
-sudo systemctl enable --now mosquitto
-
-Cek interface:
-
-ip -br address
-
-Gunakan interface yang memiliki IP broker, misalnya enp0s8.
-
-
-URUTAN UMUM
------------
-
-1. Jalankan capture broker di Ubuntu Server A.
-2. Untuk skenario serangan, jalankan attacker dari Windows dengan -Background.
-3. Jalankan client MQTT dari Windows.
-4. Tunggu semua proses selesai.
-5. Jalankan finalize_broker.sh di Ubuntu Server A.
-6. Jalankan collect_results.ps1 di Windows.
-
-
-SKENARIO NORMAL
----------------
-
-Ubuntu Server A:
-
-./scripts/run_broker.sh --scenario normal --run-id normal_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
-
-Windows:
-
-powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario normal -RunId normal_01 -BrokerHost 192.168.56.10 -Duration 60
-
-Ubuntu Server A:
-
-RUN_ID=normal_01 ./scripts/finalize_broker.sh
-
-Windows:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId normal_01 -ServerAUser server-a
-
-
-SKENARIO SYN FLOOD
+2. CEK KONFIGURASI
 ------------------
 
-Ubuntu Server A:
+Buka file:
 
-./scripts/run_broker.sh --scenario syn_flood --run-id attack_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
+lab_env.sh
 
-Windows attacker:
+Pastikan nilai berikut sesuai:
 
-powershell -ExecutionPolicy Bypass -File .\run_attacker.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60 -AttackRate 1000 -YesLocal -Background
+TARGET_IP
+    IP broker MQTT.
 
-Windows client:
+MQTT_PORTS
+    Port broker MQTT. Contoh: 1883.
 
-powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood -RunId attack_01 -BrokerHost 192.168.56.10 -Duration 60
+NET_IFACE
+    Interface jaringan PC A yang akan dicapture.
 
-Ubuntu Server A:
+Contoh isi:
 
-RUN_ID=attack_01 ./scripts/finalize_broker.sh
-
-Windows:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId attack_01 -ServerAUser server-a
-
-
-SKENARIO SYN FLOOD DENGAN RATE LIMITING
----------------------------------------
-
-Ubuntu Server A:
-
-./scripts/run_broker.sh --scenario syn_flood_rate_limit --run-id mitigation_01 --broker-host 192.168.56.10 --iface enp0s8 --duration 60 --capture-duration 75
-
-Windows attacker:
-
-powershell -ExecutionPolicy Bypass -File .\run_attacker.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60 -AttackRate 1000 -YesLocal -Background
-
-Windows client:
-
-powershell -ExecutionPolicy Bypass -File .\run_client.ps1 -Scenario syn_flood_rate_limit -RunId mitigation_01 -BrokerHost 192.168.56.10 -Duration 60
-
-Ubuntu Server A:
-
-RUN_ID=mitigation_01 ./scripts/finalize_broker.sh
-
-Windows:
-
-powershell -ExecutionPolicy Bypass -File .\collect_results.ps1 -RunId mitigation_01 -ServerAUser server-a
+TARGET_IP=192.168.100.50
+MQTT_PORTS=1883
+NET_IFACE=eth0
 
 
-CATATAN
--------
+3. JALANKAN MODE INTERAKTIF
+---------------------------
 
-- RUN_ID harus sama antara Windows dan Ubuntu Server A.
-- Jangan pakai RUN_ID lama untuk pengujian baru.
-- Serangan hanya boleh diarahkan ke broker uji sendiri.
-- Kalau raw_flow.csv belum ada, berarti finalize_broker.sh belum berhasil.
+Gunakan:
+
+./run_all_cli.sh
+
+Isi:
+
+- IP broker MQTT;
+- interface jaringan PC A;
+- port MQTT.
+
+Setelah dikonfirmasi, script akan menjalankan sniffer dan prober.
+
+
+4. JALANKAN SKENARIO NORMAL
+---------------------------
+
+Pada skenario normal:
+
+1. Broker MQTT berjalan.
+2. PC A menjalankan run_all_cli.sh.
+3. Attacker tidak dijalankan.
+4. Prober mengirim pesan MQTT normal.
+5. Sniffer menangkap trafik MQTT yang terlihat pada interface PC A.
+
+Untuk menghentikan eksperimen:
+
+Tekan CTRL+C.
+
+Setelah CTRL+C, run_all.sh akan mencari file pcap terbaru dan menjalankan
+extract_raw_flow.sh.
+
+
+5. JALANKAN SKENARIO DOS
+------------------------
+
+Pada skenario DoS:
+
+1. Broker MQTT berjalan.
+2. PC A menjalankan run_all_cli.sh.
+3. Mesin attacker mengirim serangan ke broker.
+4. Prober tetap mengirim pesan MQTT normal.
+5. Sniffer menangkap trafik MQTT yang terlihat pada interface PC A.
+
+Catatan:
+Pastikan serangan hanya dijalankan pada testbed yang diizinkan.
+
+
+6. JALANKAN SKENARIO DOS DENGAN RATE LIMITING
+---------------------------------------------
+
+Pada skenario DoS + rate limiting:
+
+1. Rate limiting diterapkan pada server broker atau perangkat jaringan yang
+   memang menjadi tempat mitigasi.
+2. PC A menjalankan run_all_cli.sh.
+3. Mesin attacker mengirim serangan ke broker.
+4. Prober tetap mengirim pesan MQTT normal.
+5. Sniffer menangkap trafik MQTT yang terlihat.
+
+
+7. HITUNG METRIK
+----------------
+
+Setelah file raw_flow.csv terbentuk, jalankan:
+
+python3 compile.py pcap/NAMA_FILE_raw_flow.csv -o metrics.csv --ports 1883
+
+Contoh:
+
+python3 compile.py pcap/mqtt_traffic_20260814_203000_raw_flow.csv -o metrics.csv --ports 1883
+
+
+8. OUTPUT
+---------
+
+Folder hasil:
+
+logs/
+    Berisi log prober MQTT.
+
+pcap/
+    Berisi file capture pcapng dan raw_flow.csv.
+
+metrics.csv
+    Hasil metrik dari compile.py.
+
+
+9. CATATAN VALIDITAS
+--------------------
+
+Karena capture dilakukan pada PC A, data serangan hanya lengkap jika trafik
+attacker ke broker melewati interface PC A.
+
+Jika attacker mengirim trafik langsung ke broker tanpa melewati PC A, maka
+sniffer di PC A bisa tidak melihat trafik serangan secara lengkap.
