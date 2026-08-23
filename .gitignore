@@ -56,5 +56,3 @@ docs/skripsi_knowledge/
 # Runtime legacy scripts are now copied to repository root and should be tracked.
 legacy_old_project/
 
-# Tooling used only for local document generation
-tools/
