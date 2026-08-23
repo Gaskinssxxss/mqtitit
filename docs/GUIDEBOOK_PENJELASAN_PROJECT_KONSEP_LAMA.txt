@@ -1,0 +1,740 @@
+GUIDEBOOK PENJELASAN PROJECT
+ANALISIS DOS PADA BROKER MQTT DENGAN KONSEP SNIFFER DAN PROBER
+===============================================================
+
+Dokumen ini bukan draft skripsi.
+
+Dokumen ini adalah guidebook untuk memahami project secara konsep. Tujuannya
+agar pembaca mengerti apa yang sedang diuji, bagian apa saja yang dipakai,
+bagaimana data dihasilkan, dan apa batasan dari project ini.
+
+
+1. INTI PROJECT
+---------------
+
+Project ini membahas analisis gangguan Denial of Service (DoS) pada broker
+MQTT.
+
+Secara sederhana:
+
+Broker MQTT adalah server yang menerima dan meneruskan pesan MQTT.
+Jika broker terganggu, komunikasi MQTT ikut terganggu.
+
+Project ini mencoba melihat:
+
+1. Seperti apa kondisi trafik MQTT normal.
+2. Apa yang berubah ketika broker menerima serangan DoS/SYN flood.
+3. Apa yang berubah ketika rate limiting diterapkan sebagai mitigasi.
+
+
+2. KONSEP DASAR MQTT
+--------------------
+
+MQTT adalah protokol komunikasi yang sering dipakai pada sistem Internet of
+Things (IoT).
+
+Dalam MQTT ada tiga istilah utama:
+
+1. Publisher
+   Perangkat atau program yang mengirim data.
+
+2. Subscriber
+   Perangkat atau program yang menerima data.
+
+3. Broker
+   Server pusat yang menerima pesan dari publisher dan meneruskan pesan ke
+   subscriber.
+
+Pada project ini, broker MQTT menjadi objek utama yang diamati.
+
+
+3. APA ITU BROKER MQTT?
+-----------------------
+
+Broker MQTT dapat dibayangkan seperti pusat lalu lintas pesan.
+
+Contoh sederhana:
+
+Sensor suhu ingin mengirim data suhu.
+Sensor tidak langsung mengirim ke semua aplikasi penerima.
+Sensor cukup mengirim ke broker.
+Lalu broker meneruskan pesan itu ke aplikasi yang membutuhkan.
+
+Karena broker menjadi pusat komunikasi, broker harus tetap tersedia.
+Jika broker lambat atau tidak bisa diakses, maka komunikasi MQTT ikut terganggu.
+
+
+4. APA ITU DOS?
+---------------
+
+DoS adalah singkatan dari Denial of Service.
+
+Tujuan DoS adalah membuat layanan menjadi terganggu.
+
+Gangguannya bisa berupa:
+
+1. layanan menjadi lambat;
+2. koneksi sulit masuk;
+3. pesan MQTT gagal dikirim;
+4. server menjadi terlalu sibuk;
+5. layanan tidak dapat digunakan oleh client normal.
+
+Dalam project ini, DoS dilihat sebagai gangguan terhadap ketersediaan broker
+MQTT.
+
+
+5. APA ITU SYN FLOOD?
+---------------------
+
+SYN flood adalah salah satu bentuk serangan DoS pada koneksi TCP.
+
+MQTT biasanya berjalan di atas TCP.
+Port MQTT yang umum digunakan adalah 1883.
+
+Sebelum client tersambung ke server TCP, ada proses awal yang disebut
+three-way handshake.
+
+Secara sederhana:
+
+1. Client mengirim SYN ke server.
+2. Server membalas SYN-ACK.
+3. Client membalas ACK.
+4. Koneksi terbentuk.
+
+Pada SYN flood, attacker mengirim banyak paket SYN ke server.
+
+Dampaknya:
+
+Server harus menangani banyak permintaan koneksi.
+Jika terlalu banyak, server bisa menjadi sibuk.
+Client normal bisa mengalami delay atau gagal.
+
+
+6. APA ITU RATE LIMITING?
+-------------------------
+
+Rate limiting adalah pembatasan laju trafik.
+
+Contoh sederhana:
+
+Jika ada terlalu banyak paket SYN masuk dalam waktu singkat, rate limiting
+dapat membatasi jumlah paket yang diproses.
+
+Tujuannya bukan selalu menghilangkan serangan sepenuhnya.
+Tujuannya adalah mengurangi dampak serangan agar server tetap lebih terkendali.
+
+
+7. KONSEP PROJECT YANG DIPAKAI
+------------------------------
+
+Project ini memakai konsep lama, yaitu konsep sniffer dan prober.
+
+Komponen utamanya:
+
+1. PC A / Host Monitoring
+2. Broker MQTT
+3. Attacker
+
+
+8. PC A / HOST MONITORING
+-------------------------
+
+PC A adalah komputer yang menjalankan project.
+
+Pada PC A berjalan:
+
+1. Sniffer
+2. Prober
+3. Ekstraksi data
+4. Analisis metrik
+
+PC A bukan broker.
+PC A adalah mesin pemantau dan pengirim trafik normal.
+
+
+9. APA ITU SNIFFER?
+-------------------
+
+Sniffer adalah bagian yang menangkap paket jaringan.
+
+Pada project ini, sniffer dijalankan oleh:
+
+sniffer_capture.sh
+
+Script ini memakai tshark.
+
+Tshark adalah versi command-line dari Wireshark.
+Tugasnya merekam paket jaringan yang terlihat pada interface PC A.
+
+Output sniffer adalah file:
+
+pcap/mqtt_traffic_<timestamp>.pcapng
+
+File pcapng ini berisi rekaman paket jaringan.
+
+
+10. APA ITU PROBER?
+-------------------
+
+Prober adalah bagian yang mengirim trafik MQTT normal ke broker.
+
+Pada project ini, prober dijalankan oleh:
+
+mqtt_prober.sh
+
+Script ini memakai mosquitto_pub.
+
+Tugas prober:
+
+1. mengirim pesan MQTT ke broker;
+2. mencatat apakah pengiriman berhasil atau gagal;
+3. mencatat waktu proses pengiriman.
+
+Output prober adalah file:
+
+logs/mqtt_1883_probe_log.csv
+
+
+11. APA ITU HOST MONITORING?
+----------------------------
+
+Host monitoring adalah mesin yang dipakai untuk memantau jalannya eksperimen.
+
+Dalam project ini, PC A disebut host monitoring karena:
+
+1. PC A menjalankan sniffer;
+2. PC A menjalankan prober;
+3. PC A menyimpan hasil capture dan log;
+4. PC A menjalankan analisis metrik.
+
+
+12. BROKER MQTT DALAM PROJECT
+-----------------------------
+
+Broker MQTT adalah target layanan yang diuji.
+
+Nilai IP broker diatur pada file:
+
+lab_env.sh
+
+Variabelnya:
+
+TARGET_IP
+
+Contoh:
+
+TARGET_IP=192.168.100.50
+
+Port broker juga diatur pada:
+
+MQTT_PORTS
+
+Contoh:
+
+MQTT_PORTS=1883
+
+
+13. ATTACKER DALAM PROJECT
+--------------------------
+
+Attacker adalah mesin lain yang mengirim trafik serangan ke broker.
+
+Pada project ini, attacker tidak dijalankan oleh script utama di root.
+Artinya, script root hanya mengatur sniffer dan prober.
+
+Attacker dijalankan terpisah pada mesin lain sesuai skenario uji yang diizinkan.
+
+Poin penting:
+
+Attacker hanya dijalankan pada skenario DoS dan DoS + rate limiting.
+Pada skenario normal, attacker tidak dijalankan.
+
+
+14. ALUR TRAFIK NORMAL
+----------------------
+
+Pada kondisi normal:
+
+PC A / Prober mengirim pesan MQTT ke broker.
+PC A / Sniffer menangkap trafik yang terlihat pada interface PC A.
+Attacker tidak berjalan.
+
+Gambaran:
+
+PC A / Prober  --------------------> Broker MQTT
+PC A / Sniffer --------------------> Capture trafik yang terlihat
+
+Data yang diharapkan:
+
+1. trafik MQTT normal terlihat;
+2. log prober menunjukkan banyak pengiriman berhasil;
+3. tidak ada lonjakan paket SYN tidak wajar.
+
+
+15. ALUR TRAFIK SAAT DOS
+------------------------
+
+Pada kondisi DoS:
+
+PC A / Prober tetap mengirim pesan MQTT normal.
+Attacker mengirim serangan ke broker.
+Sniffer tetap menangkap trafik yang terlihat pada PC A.
+
+Gambaran:
+
+PC A / Prober  --------------------> Broker MQTT
+Attacker      ---------------------> Broker MQTT
+PC A / Sniffer --------------------> Capture trafik yang terlihat
+
+Data yang diharapkan:
+
+1. ada perubahan jumlah paket TCP;
+2. ada peningkatan paket SYN jika serangan terlihat oleh sniffer;
+3. log prober bisa menunjukkan peningkatan waktu kirim atau kegagalan.
+
+
+16. ALUR TRAFIK SAAT DOS + RATE LIMITING
+----------------------------------------
+
+Pada kondisi DoS + rate limiting:
+
+Rate limiting diaktifkan pada sisi broker atau perangkat mitigasi.
+PC A tetap menjalankan prober dan sniffer.
+Attacker tetap mengirim serangan.
+
+Tujuannya adalah membandingkan:
+
+1. kondisi DoS tanpa mitigasi;
+2. kondisi DoS dengan rate limiting.
+
+Jika rate limiting membantu, maka dampak pada trafik atau prober seharusnya
+lebih terkendali.
+
+
+17. FILE KONFIGURASI LAB_ENV.SH
+-------------------------------
+
+File:
+
+lab_env.sh
+
+Fungsi:
+
+Menyimpan konfigurasi dasar eksperimen.
+
+Isi penting:
+
+TARGET_IP
+    IP broker MQTT.
+
+MQTT_PORTS
+    Port MQTT yang diamati.
+
+NET_IFACE
+    Interface jaringan PC A yang dicapture.
+
+LOG_DIR
+    Folder log prober.
+
+PCAP_DIR
+    Folder file capture.
+
+Contoh:
+
+TARGET_IP=192.168.100.50
+MQTT_PORTS=1883
+NET_IFACE=eth0
+
+
+18. FILE RUN_ALL.SH
+-------------------
+
+File:
+
+run_all.sh
+
+Fungsi:
+
+Menjalankan sniffer dan prober secara bersamaan.
+
+Saat dijalankan, script ini akan:
+
+1. membaca konfigurasi dari lab_env.sh;
+2. menjalankan sniffer_capture.sh;
+3. menjalankan mqtt_prober.sh;
+4. menunggu sampai user menekan CTRL+C;
+5. menghentikan proses;
+6. mencari file pcap terbaru;
+7. menjalankan extract_raw_flow.sh.
+
+
+19. FILE RUN_ALL_CLI.SH
+-----------------------
+
+File:
+
+run_all_cli.sh
+
+Fungsi:
+
+Versi interaktif dari run_all.sh.
+
+Script ini menanyakan:
+
+1. IP broker MQTT;
+2. interface PC A;
+3. port MQTT.
+
+File ini cocok dipakai oleh pemula karena tidak perlu mengedit lab_env.sh
+setiap kali pengujian.
+
+
+20. FILE SNIFFER_CAPTURE.SH
+---------------------------
+
+File:
+
+sniffer_capture.sh
+
+Fungsi:
+
+Menjalankan tshark untuk capture trafik MQTT.
+
+Filter yang digunakan berdasarkan port MQTT.
+
+Contoh:
+
+tcp port 1883
+
+Output:
+
+pcap/mqtt_traffic_<timestamp>.pcapng
+
+
+21. FILE MQTT_PROBER.SH
+-----------------------
+
+File:
+
+mqtt_prober.sh
+
+Fungsi:
+
+Mengirim pesan MQTT ke broker secara berkala.
+
+Program yang digunakan:
+
+mosquitto_pub
+
+Pesan dikirim ke topik:
+
+unram/iot/probe
+
+Output:
+
+logs/mqtt_1883_probe_log.csv
+
+Isi log:
+
+timestamp
+seq
+exit_code
+rtt_ms
+
+
+22. FILE EXTRACT_RAW_FLOW.SH
+----------------------------
+
+File:
+
+extract_raw_flow.sh
+
+Fungsi:
+
+Mengubah file pcapng menjadi CSV agar mudah dianalisis.
+
+Input:
+
+pcap/mqtt_traffic_<timestamp>.pcapng
+
+Output:
+
+pcap/mqtt_traffic_<timestamp>_raw_flow.csv
+
+Data yang diekstrak:
+
+1. waktu paket;
+2. ukuran paket;
+3. IP sumber;
+4. IP tujuan;
+5. port sumber;
+6. port tujuan;
+7. flag TCP;
+8. informasi MQTT jika tersedia.
+
+
+23. FILE COMPILE.PY
+-------------------
+
+File:
+
+compile.py
+
+Fungsi:
+
+Menghitung metrik dari raw_flow.csv.
+
+Contoh command:
+
+python3 compile.py pcap/mqtt_traffic_20260814_203000_raw_flow.csv -o metrics.csv --ports 1883
+
+Output:
+
+metrics.csv
+
+
+24. MAKNA OUTPUT LOG PROBER
+---------------------------
+
+File:
+
+logs/mqtt_1883_probe_log.csv
+
+Kolom:
+
+timestamp
+    Waktu pengiriman.
+
+seq
+    Nomor urut pesan.
+
+exit_code
+    Status pengiriman.
+
+    0 berarti mosquitto_pub berhasil.
+    Selain 0 berarti gagal.
+
+rtt_ms
+    Lama proses pengiriman dalam milidetik.
+
+Cara membaca:
+
+Jika banyak exit_code bukan 0, berarti prober sering gagal mengirim pesan.
+Jika rtt_ms naik saat serangan, berarti pengiriman menjadi lebih lambat.
+
+
+25. MAKNA OUTPUT PCAPNG
+-----------------------
+
+File:
+
+pcap/mqtt_traffic_<timestamp>.pcapng
+
+File ini adalah rekaman paket jaringan.
+
+File ini bisa dibuka dengan:
+
+1. Wireshark;
+2. tshark;
+3. script extract_raw_flow.sh.
+
+File ini menjadi bukti mentah trafik yang tertangkap saat eksperimen.
+
+
+26. MAKNA OUTPUT RAW_FLOW.CSV
+-----------------------------
+
+File:
+
+pcap/mqtt_traffic_<timestamp>_raw_flow.csv
+
+File ini adalah hasil ekstraksi dari pcapng.
+
+Isinya lebih mudah dianalisis daripada pcapng karena sudah berbentuk tabel CSV.
+
+Contoh data yang bisa dilihat:
+
+1. paket berasal dari IP mana;
+2. paket menuju IP mana;
+3. port yang digunakan;
+4. apakah paket adalah SYN;
+5. apakah paket adalah ACK;
+6. ukuran paket;
+7. waktu paket.
+
+
+27. MAKNA OUTPUT METRICS.CSV
+----------------------------
+
+File:
+
+metrics.csv
+
+File ini adalah hasil perhitungan metrik dari compile.py.
+
+Metrik yang dihitung antara lain:
+
+1. tcp_pkt_rate_target
+   Laju paket TCP menuju broker.
+
+2. tcp_byte_rate_target
+   Laju byte TCP menuju broker.
+
+3. syn_rate_target
+   Laju paket SYN menuju broker.
+
+4. rst_rate_target
+   Laju paket reset TCP.
+
+5. half_open_conn_target
+   Estimasi koneksi yang belum selesai.
+
+6. syn_ack_ratio_target
+   Perbandingan SYN dan SYN-ACK.
+
+7. unique_src_ip_tcp_target
+   Jumlah IP sumber unik.
+
+8. src_ip_entropy_tcp_target
+   Keragaman sumber IP.
+
+9. top_src_ip_fraction_tcp_target
+   Dominasi satu sumber IP.
+
+10. avg_pkt_size_target
+    Rata-rata ukuran paket.
+
+11. small_pkt_ratio_target
+    Rasio paket kecil.
+
+12. mean_iat_target
+    Rata-rata jarak waktu antar paket.
+
+13. burstiness_target
+    Pola lonjakan trafik.
+
+
+28. APA YANG DIBANDINGKAN ANTAR SKENARIO
+----------------------------------------
+
+Tiga skenario yang dibandingkan:
+
+1. Normal
+2. DoS / SYN flood
+3. DoS / SYN flood + rate limiting
+
+Perbandingan dilakukan dari:
+
+1. file log prober;
+2. file raw_flow.csv;
+3. file metrics.csv;
+4. file pcapng sebagai bukti mentah.
+
+
+29. CARA MEMAHAMI HASIL NORMAL
+------------------------------
+
+Pada kondisi normal, idealnya:
+
+1. prober berhasil mengirim pesan MQTT;
+2. exit_code mayoritas 0;
+3. rtt_ms relatif stabil;
+4. syn_rate tidak melonjak;
+5. trafik tidak terlalu padat;
+6. sumber IP tidak didominasi attacker.
+
+
+30. CARA MEMAHAMI HASIL DOS
+---------------------------
+
+Pada kondisi DoS, yang dicari:
+
+1. apakah paket SYN meningkat;
+2. apakah laju TCP meningkat;
+3. apakah rtt_ms prober naik;
+4. apakah ada pengiriman MQTT yang gagal;
+5. apakah sumber trafik didominasi attacker;
+6. apakah pola trafik terlihat lebih meledak dibanding normal.
+
+
+31. CARA MEMAHAMI HASIL DOS + RATE LIMITING
+-------------------------------------------
+
+Pada kondisi DoS + rate limiting, yang dicari:
+
+1. apakah trafik lebih terkendali dibanding DoS tanpa mitigasi;
+2. apakah rtt_ms prober membaik;
+3. apakah kegagalan pengiriman berkurang;
+4. apakah metrik SYN atau TCP menurun;
+5. apakah broker terlihat lebih stabil.
+
+
+32. BATASAN PROJECT
+-------------------
+
+Project ini memiliki batasan penting:
+
+1. Capture dilakukan pada PC A, bukan langsung pada broker.
+
+2. Data serangan hanya lengkap jika trafik serangan terlihat pada interface PC A.
+
+3. Project root tidak menyediakan script attacker utama.
+
+4. Project tidak membahas autentikasi MQTT.
+
+5. Project tidak membahas TLS/port 8883 secara mendalam.
+
+6. Project tidak membahas IDS berbasis machine learning.
+
+7. Project tidak membahas DDoS skala internet.
+
+
+33. KENAPA KONSEP INI BISA DIPERTANYAKAN?
+-----------------------------------------
+
+Konsep ini bisa dipertanyakan karena posisi sniffer berada di PC A.
+
+Jika attacker dan broker berkomunikasi langsung, trafik attacker bisa saja tidak
+melewati PC A.
+
+Akibatnya:
+
+Capture di PC A belum tentu mewakili seluruh trafik yang masuk ke broker.
+
+Ini bukan berarti project tidak bisa dipakai.
+Namun, bagian validitas pengambilan data harus dijelaskan dengan jujur.
+
+
+34. CARA MENJELASKAN KONSEP INI SECARA SEDERHANA
+------------------------------------------------
+
+Project ini memakai PC A sebagai host monitoring. PC A menjalankan sniffer untuk
+menangkap trafik MQTT dan prober untuk mengirim trafik MQTT normal ke broker.
+Broker MQTT menjadi target yang diamati. Pada skenario serangan, attacker dari
+mesin lain mengirim trafik DoS ke broker. Hasil capture dan log prober
+digunakan untuk membandingkan kondisi normal, kondisi serangan, dan kondisi
+serangan dengan rate limiting.
+
+
+35. KALIMAT PALING PENDEK UNTUK MENGINGAT PROJECT
+-------------------------------------------------
+
+Project ini melihat kondisi broker MQTT dengan cara menjalankan client normal
+dan capture trafik dari PC A, lalu membandingkan hasilnya saat normal, saat DoS,
+dan saat DoS diberi rate limiting.
+
+
+36. RINGKASAN AKHIR
+-------------------
+
+Inti project:
+
+1. Broker MQTT adalah objek yang diuji.
+2. PC A menjalankan sniffer dan prober.
+3. Sniffer menghasilkan pcapng.
+4. Prober menghasilkan log pengiriman MQTT.
+5. pcapng diekstrak menjadi raw_flow.csv.
+6. raw_flow.csv dihitung menjadi metrics.csv.
+7. Hasil normal, DoS, dan DoS + rate limiting dibandingkan.
+8. Keterbatasan utama adalah posisi capture berada di PC A, bukan langsung pada
+   broker.

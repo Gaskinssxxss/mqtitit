@@ -1,0 +1,919 @@
+TUTORIAL LENGKAP PROJECT KONSEP LAMA
+SNIFFER + PROBER UNTUK ANALISIS DOS PADA BROKER MQTT
+====================================================
+
+Dokumen ini dibuat untuk menjalankan project konsep lama secara step by step.
+Bahasanya dibuat langsung dan tidak berulang.
+
+Konsep project:
+
+PC A / Host Monitoring
+    Menjalankan sniffer dan prober.
+
+Broker MQTT
+    Server MQTT yang menjadi target pengujian.
+
+Attacker
+    Mesin terpisah yang mengirim serangan saat skenario DoS.
+
+Alur sederhana:
+
+PC A prober  --------------------> Broker MQTT
+PC A sniffer --------------------> Capture trafik MQTT yang terlihat
+Attacker   ----------------------> Broker MQTT
+
+
+1. ISTILAH DASAR
+----------------
+
+Broker MQTT
+    Server pusat MQTT. Client mengirim pesan ke broker.
+
+Prober
+    Program yang mengirim pesan MQTT normal ke broker. Pada project ini
+    prober dijalankan oleh file mqtt_prober.sh.
+
+Sniffer
+    Program yang menangkap paket jaringan. Pada project ini sniffer dijalankan
+    oleh file sniffer_capture.sh dengan tshark.
+
+PC A / Host Monitoring
+    Komputer yang menjalankan project, yaitu sniffer, prober, ekstraksi data,
+    dan analisis metrik.
+
+SYN flood
+    Serangan DoS yang mengirim banyak paket SYN ke server TCP. MQTT port 1883
+    berjalan di atas TCP, sehingga broker MQTT bisa diuji dengan skenario ini.
+
+Rate limiting
+    Pembatasan laju trafik. Pada skenario mitigasi, rate limiting digunakan
+    untuk mengurangi dampak trafik serangan.
+
+
+2. PERANGKAT YANG DIBUTUHKAN
+----------------------------
+
+Minimal perangkat:
+
+1. PC A / host monitoring.
+2. Broker MQTT.
+3. Mesin attacker untuk skenario DoS.
+
+Untuk demo sederhana:
+
+1. Broker MQTT bisa dijalankan di Windows.
+2. Sniffer dan prober dijalankan di WSL Ubuntu.
+3. Attacker dijalankan dari mesin lain pada testbed yang diizinkan.
+
+Jika hanya ada 1 laptop:
+
+1. Windows menjalankan broker MQTT.
+2. WSL Ubuntu menjalankan sniffer dan prober.
+3. Attacker boleh dijalankan dari terminal WSL lain sebagai simulasi serangan
+   lokal.
+
+Artinya, attacker bukan perangkat fisik terpisah. Attacker hanya disimulasikan
+dari laptop yang sama untuk kebutuhan demo dan pengujian awal.
+
+Catatan penting:
+
+Pada konsep lama ini, capture dilakukan di PC A. Artinya, trafik attacker ke
+broker hanya terlihat lengkap jika trafik tersebut memang terlihat pada
+interface yang dicapture oleh PC A.
+
+
+3. INSTALL TOOLS DI WINDOWS
+---------------------------
+
+Bagian ini dilakukan jika laptop memakai Windows.
+
+3.1 Install Git for Windows
+
+1. Buka browser.
+2. Cari:
+
+   Git for Windows
+
+3. Download installer.
+4. Jalankan installer.
+5. Untuk pemula, gunakan pilihan default.
+6. Setelah selesai, buka PowerShell.
+7. Ketik:
+
+   git --version
+
+Jika muncul versi Git, berarti Git sudah terinstall.
+
+
+3.2 Install Mosquitto for Windows
+
+1. Buka browser.
+2. Cari:
+
+   Mosquitto Windows download
+
+3. Download installer Mosquitto.
+4. Jalankan installer.
+5. Lokasi instalasi biasanya:
+
+   C:\Program Files\mosquitto\
+
+6. Buka File Explorer.
+7. Masuk ke:
+
+   C:\Program Files\mosquitto\
+
+8. Pastikan ada file:
+
+   mosquitto.exe
+   mosquitto_pub.exe
+   mosquitto_sub.exe
+
+
+3.3 Install WSL Ubuntu
+
+1. Klik Start.
+2. Ketik:
+
+   PowerShell
+
+3. Klik kanan Windows PowerShell.
+4. Pilih Run as administrator.
+5. Ketik:
+
+   wsl --install -d Ubuntu
+
+6. Tunggu sampai selesai.
+7. Restart Windows jika diminta.
+8. Buka Ubuntu dari Start Menu.
+9. Buat username dan password Ubuntu.
+
+Catatan:
+
+Saat mengetik password Ubuntu, tulisan password memang tidak terlihat. Itu
+normal.
+
+
+3.4 Cek WSL Ubuntu
+
+1. Buka PowerShell biasa.
+2. Ketik:
+
+   wsl -l -v
+
+Jika Ubuntu muncul, berarti WSL siap.
+
+Untuk masuk ke WSL, ketik:
+
+   wsl
+
+Atau klik Start, ketik Ubuntu, lalu buka aplikasi Ubuntu.
+
+
+4. INSTALL TOOLS DI WSL / UBUNTU
+--------------------------------
+
+Bagian ini dilakukan di terminal Ubuntu/WSL.
+
+4.1 Update Ubuntu
+
+Ketik:
+
+   sudo apt update
+
+Masukkan password Ubuntu jika diminta.
+
+
+4.2 Install Tool Utama
+
+Ketik:
+
+   sudo apt install -y tshark mosquitto-clients python3 python3-pip git
+
+Fungsi tool:
+
+tshark
+    Untuk capture dan membaca paket jaringan.
+
+mosquitto-clients
+    Untuk menjalankan mosquitto_pub sebagai prober MQTT.
+
+python3
+    Untuk menjalankan compile.py.
+
+python3-pip
+    Untuk install library Python.
+
+git
+    Untuk clone atau update project.
+
+
+4.3 Pilihan Saat Install Tshark
+
+Saat install tshark, bisa muncul pertanyaan:
+
+Should non-superusers be able to capture packets?
+
+Jika muncul, pilih:
+
+   Yes
+
+Alasannya agar proses capture lebih mudah untuk pemula. Walaupun begitu,
+script sniffer tetap memakai sudo saat menjalankan tshark.
+
+
+4.4 Cek Tool
+
+Ketik satu per satu:
+
+   tshark --version
+   mosquitto_pub --help
+   python3 --version
+   pip3 --version
+   git --version
+
+Jika semuanya menampilkan output, tool utama sudah siap.
+
+
+5. CLONE ATAU UPDATE PROJECT
+----------------------------
+
+Bagian ini dilakukan di terminal Ubuntu/WSL.
+
+Jika project belum ada:
+
+1. Ketik:
+
+   cd ~
+
+2. Clone repository:
+
+   git clone <URL_REPOSITORY_GITHUB> mqtitit
+
+3. Masuk ke folder project:
+
+   cd ~/mqtitit
+
+Jika project sudah ada:
+
+1. Masuk ke folder project:
+
+   cd ~/mqtitit
+
+2. Update project:
+
+   git pull origin main
+
+Catatan:
+
+Ganti <URL_REPOSITORY_GITHUB> dengan URL GitHub project.
+
+
+6. SETUP PROJECT DI WSL / UBUNTU
+--------------------------------
+
+Pastikan posisi terminal ada di folder project:
+
+   cd ~/mqtitit
+
+Cek isi folder:
+
+   ls
+
+Harus terlihat file:
+
+   lab_env.sh
+   run_all.sh
+   run_all_cli.sh
+   sniffer_capture.sh
+   mqtt_prober.sh
+   extract_raw_flow.sh
+   compile.py
+   requirements.txt
+
+Install library Python:
+
+   python3 -m pip install -r requirements.txt
+
+Jika muncul error externally managed environment, gunakan:
+
+   python3 -m pip install --break-system-packages -r requirements.txt
+
+Cek library:
+
+   python3 -c "import pandas, numpy; print('library python siap')"
+
+Jadikan script bisa dijalankan:
+
+   chmod +x *.sh
+
+Cek permission:
+
+   ls -l *.sh
+
+Jika ada huruf x pada file .sh, berarti script bisa dijalankan.
+
+
+7. MENJALANKAN BROKER MQTT
+--------------------------
+
+Pilih salah satu: broker di Windows atau broker di Ubuntu.
+
+
+7.1 Jika Broker MQTT Dijalankan di Windows
+
+1. Klik Start.
+2. Ketik:
+
+   PowerShell
+
+3. Klik kanan Windows PowerShell.
+4. Pilih Run as administrator.
+5. Klik Yes jika muncul konfirmasi.
+6. Ketik:
+
+   cd "C:\Program Files\mosquitto"
+
+7. Jalankan broker:
+
+   .\mosquitto.exe -v
+
+8. Jangan tutup PowerShell ini selama pengujian.
+
+Cek port broker:
+
+1. Buka PowerShell baru.
+2. Ketik:
+
+   netstat -ano | findstr :1883
+
+Jika muncul baris LISTENING, broker berjalan.
+
+Cek IP Windows:
+
+1. Di PowerShell, ketik:
+
+   ipconfig
+
+2. Cari IPv4 Address pada adapter yang dipakai.
+
+Contoh:
+
+   IPv4 Address . . . . . . . . . . . : 192.168.100.50
+
+IP itu dipakai sebagai IP broker.
+
+
+7.2 Jika Broker MQTT Dijalankan di Ubuntu
+
+1. Buka terminal Ubuntu.
+2. Ketik:
+
+   sudo apt update
+   sudo apt install -y mosquitto mosquitto-clients
+
+3. Aktifkan broker:
+
+   sudo systemctl enable --now mosquitto
+
+4. Cek status:
+
+   sudo systemctl status mosquitto
+
+Jika terlihat active (running), broker berjalan.
+
+Untuk keluar dari tampilan status:
+
+   tekan q
+
+Cek IP Ubuntu broker:
+
+   ip -br address
+
+Contoh:
+
+   eth0    UP    192.168.100.50/24
+
+Berarti IP broker adalah 192.168.100.50.
+
+
+8. CEK KONEKSI DARI PC A KE BROKER
+----------------------------------
+
+Bagian ini dilakukan di WSL/Ubuntu tempat project dijalankan.
+
+Misalnya IP broker adalah:
+
+   192.168.100.50
+
+Cek ping:
+
+   ping 192.168.100.50
+
+Jika ada balasan, PC A bisa menjangkau broker.
+
+Untuk berhenti:
+
+   tekan CTRL+C
+
+Cek publish MQTT:
+
+   mosquitto_pub -h 192.168.100.50 -p 1883 -t unram/iot/test -m "test"
+
+Jika tidak ada error, broker bisa menerima pesan MQTT.
+
+Jika error:
+
+1. Pastikan broker berjalan.
+2. Pastikan IP broker benar.
+3. Pastikan port 1883 aktif.
+4. Pastikan firewall tidak memblokir.
+
+
+9. CEK INTERFACE CAPTURE DI PC A
+--------------------------------
+
+Interface adalah jalur jaringan yang akan dicapture oleh sniffer.
+
+Di WSL/Ubuntu, ketik:
+
+   ip -br address
+
+Contoh output:
+
+   eth0    UP    192.168.100.10/24
+   wlan0   UP    192.168.1.20/24
+
+Jika broker ada pada jaringan 192.168.100.x, maka interface yang kemungkinan
+benar adalah eth0.
+
+Catat nama interface tersebut karena akan dimasukkan ke run_all_cli.sh.
+
+Alternatif cek interface tshark:
+
+   tshark -D
+
+
+10. MENJALANKAN PROJECT MODE INTERAKTIF
+---------------------------------------
+
+Cara paling mudah adalah memakai run_all_cli.sh.
+
+1. Di WSL/Ubuntu, masuk ke folder project:
+
+   cd ~/mqtitit
+
+2. Jalankan:
+
+   ./run_all_cli.sh
+
+3. Script akan meminta:
+
+   IP broker MQTT
+   interface capture
+   port MQTT
+
+4. Contoh input:
+
+   IP broker MQTT    : 192.168.100.50
+   Interface PC A    : eth0
+   Port MQTT         : 1883
+
+5. Setelah ringkasan konfigurasi muncul, lanjutkan jika datanya benar.
+
+Saat berjalan, script akan menjalankan:
+
+1. sniffer_capture.sh untuk capture trafik MQTT.
+2. mqtt_prober.sh untuk mengirim pesan MQTT normal setiap 1 detik.
+
+Terminal jangan ditutup selama pengujian.
+
+
+11. MENGHENTIKAN EKSPERIMEN
+---------------------------
+
+Jika durasi sudah cukup, misalnya 60 detik:
+
+   tekan CTRL+C
+
+Setelah CTRL+C, script akan:
+
+1. menghentikan sniffer;
+2. menghentikan prober;
+3. mencari file pcap terbaru;
+4. menjalankan extract_raw_flow.sh;
+5. membuat raw_flow.csv.
+
+
+12. SKENARIO NORMAL
+-------------------
+
+Tujuan:
+
+Merekam kondisi broker MQTT tanpa serangan.
+
+Langkah:
+
+1. Jalankan broker MQTT.
+2. Pastikan PC A bisa ping broker.
+3. Pastikan mosquitto_pub bisa publish ke broker.
+4. Di PC A, jalankan:
+
+   ./run_all_cli.sh
+
+5. Isi IP broker, interface, dan port 1883.
+6. Jangan jalankan attacker.
+7. Biarkan berjalan sekitar 60 detik.
+8. Tekan CTRL+C.
+9. Pastikan file hasil ada di folder logs/ dan pcap/.
+
+Data ini menjadi baseline.
+
+
+13. MODE ATTACKER
+-----------------
+
+Attacker adalah sumber trafik serangan ke broker MQTT.
+
+Pada project ini ada dua mode attacker:
+
+1. Mode attacker perangkat terpisah.
+2. Mode attacker 1 laptop.
+
+
+13.1 Mode Attacker Perangkat Terpisah
+
+Mode ini dipakai jika ada laptop/VM/mesin lain untuk attacker.
+
+Posisinya:
+
+PC A / WSL
+    Menjalankan sniffer dan prober.
+
+Windows / server broker
+    Menjalankan broker MQTT.
+
+Mesin attacker
+    Mengirim trafik SYN flood ke IP broker pada port 1883.
+
+Mode ini lebih rapi secara konsep karena attacker benar-benar berasal dari
+mesin yang berbeda.
+
+
+13.2 Mode Attacker 1 Laptop
+
+Mode ini dipakai jika hanya ada satu laptop.
+
+Posisinya:
+
+PowerShell Windows
+    Menjalankan broker MQTT Mosquitto.
+
+Terminal WSL 1
+    Menjalankan sniffer dan prober dengan run_all_cli.sh.
+
+Terminal WSL 2
+    Menjalankan simulasi attacker.
+
+Urutan penggunaannya:
+
+1. Buka PowerShell Windows.
+2. Jalankan broker Mosquitto.
+3. Buka terminal WSL pertama.
+4. Jalankan:
+
+   ./run_all_cli.sh
+
+5. Isi IP broker Windows, interface capture, dan port 1883.
+6. Buka terminal WSL kedua.
+7. Jalankan tool attacker yang digunakan pada testbed.
+8. Target attacker diarahkan ke IP broker Windows.
+9. Port target attacker adalah port MQTT:
+
+   1883
+
+10. Setelah durasi cukup, hentikan pengujian dari terminal WSL pertama dengan
+    CTRL+C.
+
+Catatan:
+
+Mode 1 laptop dipakai untuk demo dan pengujian awal. Di laporan, jelaskan bahwa
+attacker pada mode ini adalah simulasi lokal dari WSL, bukan perangkat eksternal
+yang benar-benar terpisah.
+
+
+13.3 Contoh Pembagian Terminal untuk 1 Laptop
+
+Terminal 1 - PowerShell Windows:
+
+   Broker MQTT berjalan.
+
+Terminal 2 - WSL Ubuntu:
+
+   Sniffer dan prober berjalan.
+
+Terminal 3 - WSL Ubuntu:
+
+   Simulasi attacker berjalan.
+
+Jadi walaupun hanya memakai satu laptop, peran sistem tetap bisa dipisahkan
+secara logis:
+
+1. Windows sebagai broker.
+2. WSL terminal pertama sebagai host monitoring.
+3. WSL terminal kedua sebagai simulasi attacker.
+
+
+14. SKENARIO DOS / SYN FLOOD
+----------------------------
+
+Tujuan:
+
+Merekam kondisi saat broker menerima serangan.
+
+Langkah:
+
+1. Jalankan broker MQTT.
+2. Di PC A, jalankan:
+
+   ./run_all_cli.sh
+
+3. Isi IP broker, interface, dan port 1883.
+4. Pastikan sniffer dan prober berjalan.
+5. Jalankan serangan dari mesin attacker pada testbed yang diizinkan.
+6. Biarkan sekitar 60 detik.
+7. Tekan CTRL+C di terminal PC A.
+8. Pastikan file pcapng dan raw_flow.csv terbentuk.
+
+Catatan:
+
+Project root ini tidak menyediakan script attacker utama. Serangan hanya boleh
+dijalankan pada lab/testbed yang memang diizinkan.
+
+
+15. SKENARIO DOS + RATE LIMITING
+--------------------------------
+
+Tujuan:
+
+Merekam kondisi saat broker menerima serangan, tetapi mitigasi rate limiting
+sudah aktif.
+
+Langkah:
+
+1. Jalankan broker MQTT.
+2. Aktifkan rate limiting pada sisi broker, firewall, router, atau perangkat
+   mitigasi yang digunakan.
+3. Di PC A, jalankan:
+
+   ./run_all_cli.sh
+
+4. Isi IP broker, interface, dan port 1883.
+5. Pastikan sniffer dan prober berjalan.
+6. Jalankan serangan dari mesin attacker pada testbed yang diizinkan.
+7. Biarkan sekitar 60 detik.
+8. Tekan CTRL+C di terminal PC A.
+9. Simpan file hasil sebagai data skenario mitigasi.
+
+
+16. OUTPUT PROJECT
+------------------
+
+Output utama ada di:
+
+   logs/
+   pcap/
+
+Folder logs/ berisi log prober.
+
+Contoh:
+
+   logs/mqtt_1883_probe_log.csv
+
+Kolom penting:
+
+timestamp
+    Waktu pengiriman.
+
+seq
+    Nomor urut pesan.
+
+exit_code
+    0 berarti publish berhasil. Selain 0 berarti gagal.
+
+rtt_ms
+    Lama proses publish dalam milidetik.
+
+Folder pcap/ berisi capture dan hasil ekstraksi.
+
+Contoh:
+
+   pcap/mqtt_traffic_20260814_203000.pcapng
+   pcap/mqtt_traffic_20260814_203000_raw_flow.csv
+
+pcapng adalah file capture mentah.
+raw_flow.csv adalah hasil ekstraksi field penting dari capture.
+
+
+17. JIKA RAW_FLOW.CSV TIDAK TERBENTUK
+-------------------------------------
+
+Cek file pcap:
+
+   ls pcap
+
+Contoh file:
+
+   mqtt_traffic_20260814_203000.pcapng
+
+Jalankan ekstraksi manual:
+
+   ./extract_raw_flow.sh pcap/mqtt_traffic_20260814_203000.pcapng
+
+Setelah selesai, file raw_flow.csv akan terbentuk di folder pcap/.
+
+
+18. HITUNG METRIK
+-----------------
+
+Setelah raw_flow.csv ada, jalankan compile.py.
+
+Contoh:
+
+   python3 compile.py pcap/mqtt_traffic_20260814_203000_raw_flow.csv -o metrics_normal.csv --ports 1883
+
+Untuk skenario lain, gunakan nama output berbeda.
+
+Contoh:
+
+   python3 compile.py pcap/mqtt_traffic_20260814_204000_raw_flow.csv -o metrics_dos.csv --ports 1883
+
+   python3 compile.py pcap/mqtt_traffic_20260814_205000_raw_flow.csv -o metrics_mitigation.csv --ports 1883
+
+
+19. MERAPIKAN HASIL
+-------------------
+
+Agar hasil tidak tercampur, buat folder per skenario:
+
+   mkdir -p hasil/normal_01
+   mkdir -p hasil/dos_01
+   mkdir -p hasil/mitigation_01
+
+File yang sebaiknya disimpan:
+
+1. log dari folder logs/;
+2. file pcapng dari folder pcap/;
+3. raw_flow.csv dari folder pcap/;
+4. metrics.csv hasil compile.py;
+5. catatan IP broker, interface, port, dan durasi pengujian.
+
+
+20. CARA MEMBACA HASIL
+----------------------
+
+Kondisi normal:
+
+1. exit_code mayoritas 0.
+2. rtt_ms relatif stabil.
+3. syn_rate rendah.
+
+Kondisi DoS:
+
+1. paket SYN meningkat.
+2. rtt_ms bisa naik.
+3. exit_code bisa gagal.
+4. trafik terlihat lebih padat.
+
+Kondisi DoS + rate limiting:
+
+1. serangan mungkin masih terlihat;
+2. dampaknya diharapkan lebih terkendali;
+3. rtt_ms bisa lebih stabil dibanding DoS tanpa mitigasi;
+4. kegagalan publish bisa lebih sedikit.
+
+
+21. TROUBLESHOOTING
+-------------------
+
+Masalah: PowerShell tidak bisa masuk folder Mosquitto.
+
+Solusi:
+
+   cd "C:\Program Files\mosquitto"
+
+
+Masalah: mosquitto.exe tidak ditemukan.
+
+Solusi:
+
+1. Pastikan Mosquitto sudah diinstall.
+2. Cek folder C:\Program Files\mosquitto.
+3. Jika tidak ada, cari lokasi instalasi Mosquitto.
+
+
+Masalah: port 1883 tidak aktif.
+
+Solusi:
+
+1. Jalankan broker:
+
+   .\mosquitto.exe -v
+
+2. Buka PowerShell baru.
+3. Cek:
+
+   netstat -ano | findstr :1883
+
+
+Masalah: tshark command not found.
+
+Solusi:
+
+   sudo apt install -y tshark
+
+
+Masalah: mosquitto_pub command not found.
+
+Solusi:
+
+   sudo apt install -y mosquitto-clients
+
+
+Masalah: permission denied saat capture.
+
+Solusi:
+
+Masukkan password Linux/Ubuntu saat sudo meminta password.
+
+
+Masalah: tidak ada trafik tertangkap.
+
+Solusi:
+
+1. Pastikan interface benar.
+2. Pastikan IP broker benar.
+3. Pastikan port MQTT benar.
+4. Pastikan prober berhasil publish.
+5. Pastikan jaringan PC A memang melihat trafik tersebut.
+
+
+Masalah: serangan tidak terlihat di capture.
+
+Kemungkinan:
+
+1. Trafik attacker tidak melewati PC A.
+2. Interface capture salah.
+3. Filter hanya menangkap port tertentu.
+4. Attacker menyerang IP atau port yang berbeda.
+
+Catatan:
+
+Pada konsep lama, capture berada di PC A, bukan langsung di broker. Karena itu,
+capture tidak selalu melihat semua trafik yang masuk ke broker.
+
+
+22. CHECKLIST SEBELUM PENGUJIAN
+-------------------------------
+
+1. Broker MQTT sudah berjalan.
+2. IP broker sudah diketahui.
+3. Port MQTT sudah diketahui.
+4. PC A bisa ping broker.
+5. mosquitto_pub bisa publish ke broker.
+6. Interface PC A sudah diketahui.
+7. tshark sudah terinstall.
+8. mosquitto-clients sudah terinstall.
+9. Library pandas dan numpy sudah terinstall.
+10. Script sudah executable.
+
+
+23. CHECKLIST SETELAH PENGUJIAN
+-------------------------------
+
+1. Ada file log di folder logs/.
+2. Ada file pcapng di folder pcap/.
+3. Ada file raw_flow.csv di folder pcap/.
+4. compile.py berhasil membuat metrics.csv.
+5. File hasil tiap skenario tidak tercampur.
+
+
+24. RINGKASAN PALING PENDEK
+---------------------------
+
+1. Jalankan broker MQTT.
+2. Buka WSL/Ubuntu.
+3. Masuk folder project:
+
+   cd ~/mqtitit
+
+4. Jalankan:
+
+   ./run_all_cli.sh
+
+5. Isi IP broker, interface, dan port.
+6. Untuk normal, jangan jalankan attacker.
+7. Untuk DoS, jalankan attacker dari mesin lain.
+8. Untuk mitigasi, aktifkan rate limiting lalu jalankan attacker.
+9. Tekan CTRL+C.
+10. Hitung metrik dengan compile.py.
